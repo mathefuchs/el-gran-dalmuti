@@ -24,11 +24,6 @@ class StateTest(unittest.TestCase):
     def test_initial_state(self):
         """ Tests the initial distribution of cards. """
 
-        # Check that randomness only depends upon numpy
-        np.random.seed(42)
-        self.assertTrue(np.all(random_initial_cards()
-                               == random_initial_cards()))
-
         # Check number of cards of each kind
         self.assertTrue(
             np.all(np.sum(random_initial_cards(), axis=0) == AVAILABLE_CARDS))
@@ -36,7 +31,7 @@ class StateTest(unittest.TestCase):
         # Check number of cards for each player
         cards_per_player = np.sum(AVAILABLE_CARDS) // NUM_PLAYERS
         self.assertTrue(np.all(np.sum(random_initial_cards(), axis=1)
-                               == cards_per_player * np.ones(NUM_PLAYERS)))
+                               == (cards_per_player * np.ones(NUM_PLAYERS))))
 
 
 if __name__ == '__main__':
