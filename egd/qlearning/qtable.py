@@ -2,83 +2,79 @@ import numpy as np
 import pandas as pd
 
 
-single_state_width = 13
-state_columns = 3 * single_state_width
-next_states = 31
-num_columns = state_columns + next_states
+class QTable:
+    single_state_width = 13
+    state_columns = 3 * single_state_width
+    next_states = 31
+    num_columns = state_columns + next_states
 
-already_played_indices = list(range(0, single_state_width))
-board_indices = list(range(single_state_width, 2 * single_state_width))
-hand_indices = list(range(2 * single_state_width, 3 * single_state_width))
-next_state_indices = list(range(state_columns, state_columns + next_states))
+    already_played_indices = list(range(0, single_state_width))
+    board_indices = list(range(single_state_width, 2 * single_state_width))
+    hand_indices = list(range(2 * single_state_width, 3 * single_state_width))
+    next_state_indices = list(
+        range(state_columns, state_columns + next_states))
 
+    def __init__(self):
+        """ Creates an empty Q-table. """
 
-def query_qtable(qtable, already_played, board, hand):
-    """ Queries the q-table. """
+        # Create empty dataframe
+        self.qtable = pd.DataFrame(columns=list(range(QTable.num_columns)))
 
-    return np.all(
-        qtable.iloc[:, already_played_indices] == already_played
-        & qtable.iloc[:, board_indices] == board
-        & qtable.iloc[:, hand_indices] == hand, axis=1
-    )
+        # Set types
+        for column in range(QTable.state_columns):
+            self.qtable[column] = self.qtable[column].astype(np.int8)
+        for column in range(QTable.next_states):
+            self.qtable[QTable.state_columns + column] = \
+                self.qtable[column].astype(np.float32)
 
+    def _query_qtable(self, already_played, board, hand):
+        """ Queries the q-table. """
 
-def create_qtable_df():
-    """ Creates an empty Q-table. """
+        return np.all(
+            (self.qtable.iloc[:, QTable.already_played_indices]
+             == already_played)
+            & self.qtable.iloc[:, QTable.board_indices] == board
+            & self.qtable.iloc[:, QTable.hand_indices] == hand, axis=1
+        )
 
-    # Create empty dataframe
-    qtable = pd.DataFrame(columns=list(range(num_columns)))
+    def create_qtable_entry(self, already_played, board, hand):
+        """ Creates a new qtable entry. """
 
-    # Set types
-    for column in range(state_columns):
-        qtable[column] = qtable[column].astype(np.int8)
-    for column in range(next_states):
-        qtable[state_columns + column] = qtable[column].astype(np.float32)
+        # Create new entry row
+        new_qtable_entry = pd.DataFrame(
+            np.zeros((1, QTable.next_states)), index=[0],
+            columns=list(range(QTable.num_columns)))
 
-    return qtable
+        # Set data types
+        for column in range(QTable.state_columns):
+            new_qtable_entry[column] = new_qtable_entry[column].astype(np.int8)
+        for column in range(QTable.next_states):
+            new_qtable_entry[QTable.state_columns + column] = \
+                new_qtable_entry[column].astype(np.float32)
 
+        self.qtable.append(new_qtable_entry, ignore_index=True)
 
-def create_qtable_entry(qtable, already_played, board, hand):
-    """ Creates a new qtable entry. """
+    def get_qtable_entry(self, already_played, board, hand):
+        """ Get q-values for entry. """
 
-    # Create new entry row
-    new_qtable_entry = pd.DataFrame(
-        np.zeros((1, next_states)), index=[0],
-        columns=list(range(num_columns)))
+        result = self.qtable[self._query_qtable(already_played, board, hand)]
 
-    # Set data types
-    for column in range(state_columns):
-        new_qtable_entry[column] = new_qtable_entry[column].astype(np.int8)
-    for column in range(next_states):
-        new_qtable_entry[state_columns + column] = \
-            new_qtable_entry[column].astype(np.float32)
+        if len(result) == 1:
+            return result[QTable.next_state_indices]
+        else:
+            return None
 
-    return qtable.append(new_qtable_entry, ignore_index=True)
+    def update_qtable(self, already_played, board, hand, update_qvalue_func):
+        """ Update q-value. """
 
+        row_selected = self._query_qtable(already_played, board, hand)
+        self.qtable.iloc[row_selected, QTable.next_state_indices] = \
+            update_qvalue_func(
+                self.qtable.iloc[row_selected, QTable.next_state_indices])
 
-def get_qtable_entry(qtable, already_played, board, hand):
-    """ Get q-values for entry. """
+    def delete_qtable_entry(self, already_played, board, hand):
+        """ Delete q-table entry. """
 
-    result = qtable[query_qtable(qtable, already_played, board, hand)]
-
-    if len(result) == 1:
-        return result[next_state_indices]
-    else:
-        return None
-
-
-def update_qtable(qtable, already_played, board, hand, update_qvalue_func):
-    """ Update q-value. """
-
-    row_selected = query_qtable(qtable, already_played, board, hand)
-    qtable.iloc[row_selected, next_state_indices] = update_qvalue_func(
-        qtable.iloc[row_selected, next_state_indices]
-    )
-
-
-def delete_qtable_entry(qtable, already_played, board, hand):
-    """ Delete q-table entry. """
-
-    qtable.drop(qtable.index[
-        query_qtable(qtable, already_played, board, hand)
-    ], inplace=True)
+        self.qtable.drop(self.qtable.index[
+            self._query_qtable(already_played, board, hand)
+        ], inplace=True)
