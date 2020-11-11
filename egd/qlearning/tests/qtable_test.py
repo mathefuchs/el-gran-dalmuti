@@ -2,19 +2,23 @@ import numpy as np
 import pandas as pd
 import unittest
 
+from egd.game.cards import NUM_CARD_VALUES
 from egd.qlearning.qtable import QTable
 
 
 class QTableTest(unittest.TestCase):
 
-    def __init__(self):
+    def setUp(self):
         """ Setup QTable. """
 
         self.qtable = QTable()
 
-        self.already_played = np.random.rand(QTable.num_columns)
-        self.board = np.random.rand(QTable.num_columns)
-        self.hand = np.random.rand(QTable.num_columns)
+        self.already_played = np.random.randint(
+            NUM_CARD_VALUES, size=QTable.single_state_width)
+        self.board = np.random.randint(
+            NUM_CARD_VALUES, size=QTable.single_state_width)
+        self.hand = np.random.randint(
+            NUM_CARD_VALUES, size=QTable.single_state_width)
 
     def test_insert_retrieve(self):
         """ Insert single row and retrieve it. """
@@ -46,7 +50,7 @@ class QTableTest(unittest.TestCase):
 
         # Update and check again
         def update_func(array):
-            array[0] = 11.0
+            array.iloc[0, 0] = 11.0
             return array + 1
 
         self.qtable.update_qtable(
