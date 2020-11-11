@@ -2,7 +2,7 @@ import numpy as np
 import unittest
 
 from egd.game.cards import NUM_CARD_VALUES, AVAILABLE_CARDS
-from egd.game.state import has_already_won, random_initial_cards, NUM_PLAYERS
+from egd.game.state import has_finished, random_initial_cards, NUM_PLAYERS
 
 
 class StateTest(unittest.TestCase):
@@ -10,12 +10,12 @@ class StateTest(unittest.TestCase):
     def test_has_won(self):
         """ Tests whether a hand has won. """
 
-        self.assertTrue(has_already_won(np.zeros(NUM_CARD_VALUES)))
-        self.assertFalse(has_already_won(np.ones(NUM_CARD_VALUES)))
-        self.assertTrue(np.all(has_already_won(
+        self.assertTrue(has_finished(np.zeros(NUM_CARD_VALUES)))
+        self.assertFalse(has_finished(np.ones(NUM_CARD_VALUES)))
+        self.assertTrue(np.all(has_finished(
             np.zeros((2, NUM_CARD_VALUES))) == np.array([True, True])))
         self.assertTrue(np.all(
-            has_already_won(np.array([
+            has_finished(np.array([
                 [0, 0, 0, 0, 1], [0, 0, 0, 0, 0], [1, 0, 0, 0, 0]
             ])) == np.array([
                 False, True, False

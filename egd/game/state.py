@@ -7,7 +7,7 @@ NUM_PLAYERS = 4
 PLAYER = list(range(NUM_PLAYERS))
 
 
-def has_already_won(hand):
+def has_finished(hand):
     """ 
         Whether the hand is already empty.
 

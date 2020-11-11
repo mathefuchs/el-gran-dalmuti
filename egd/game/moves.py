@@ -1,7 +1,7 @@
 import numpy as np
 
 from egd.game.cards import NUM_CARD_VALUES, JOKER
-from egd.game.state import has_already_won, get_cards_array
+from egd.game.state import has_finished, get_cards_array
 
 
 def possible_next_moves(hand, board):
@@ -16,7 +16,7 @@ def possible_next_moves(hand, board):
     possible_hands = np.reshape(hand, (1, NUM_CARD_VALUES))
     possible_boards = np.reshape(board, (1, NUM_CARD_VALUES))
 
-    if not has_already_won(hand):
+    if not has_finished(hand):
         for card_type_in_hand in range(NUM_CARD_VALUES - 1, -1, -1):
             # You can play clean
             if card_type_in_hand < card_type_in_board and \
