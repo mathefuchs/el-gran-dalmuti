@@ -5,7 +5,8 @@ import pandas as pd
 class QTable:
     single_state_width = 13
     state_columns = 3 * single_state_width
-    next_states = 31
+    # 236 = (1 + 2 + ... + 12) * 3 [Combination with Jokers] + 2 [Jokers played alone]
+    next_states = 236
     num_columns = state_columns + next_states
 
     already_played_indices = list(range(0, single_state_width))
