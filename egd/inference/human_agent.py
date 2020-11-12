@@ -18,7 +18,7 @@ class HumanAgent:
 
         self._hand = initial_hand
 
-    def do_step(self, already_played, board, always_use_best=True):
+    def do_step(self, already_played, board, always_use_best=True, print_luck=False):
         """
             Performs a step in the game based on human input.
 
@@ -75,7 +75,8 @@ class HumanAgent:
                 print("Invalid move.")
                 continue
 
-            if card_array_to_play in possible_boards:
+            if card_array_to_play in possible_boards \
+                    and not np.all(card_array_to_play == board):
                 self._hand -= card_array_to_play
                 next_board = card_array_to_play
                 next_already_played = already_played + next_board

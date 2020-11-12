@@ -45,7 +45,7 @@ class QLearningAgent:
 
         self._qtable.restore_from_file(file_path)
 
-    def do_step(self, already_played, board, always_use_best=False):
+    def do_step(self, already_played, board, always_use_best=False, print_luck=False):
         """
             Performs a step in the game.
 
@@ -79,6 +79,11 @@ class QLearningAgent:
         if not always_use_best and np.random.uniform() < self._epsilon:
             action_index = np.random.choice(len(possible_hands))
         else:
+            # Debug "luck"
+            if print_luck and np.all(learned_values.iloc[0, :] == 0):
+                print("Player", self._playerIndex,
+                      "- Warning: Decision made randomly")
+
             # Get best action with random tie-breaking
             possible_qvalues = learned_values.iloc[
                 0, list(range(len(possible_hands)))

@@ -49,7 +49,8 @@ def do_simulation(agents):
         # Perform a move
         finished, new_already_played, new_board = \
             agents[current_player_index].do_step(
-                already_played, board, always_use_best=True)
+                already_played, board, always_use_best=True,
+                print_luck=True)
 
         # Keep track of finished agents
         if finished and current_player_index not in finished_players:
