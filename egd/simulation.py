@@ -61,7 +61,7 @@ def do_simulation(num_epochs):
     for playerIndex, agent in enumerate(agents):
         agent.save_model(
             "./egd/saved-agents/qtable-agent-"
-            + playerIndex + ".csv")
+            + str(playerIndex) + ".csv")
 
 
 if __name__ == '__main__':
