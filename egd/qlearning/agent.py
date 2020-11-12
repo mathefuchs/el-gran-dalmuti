@@ -26,7 +26,7 @@ class QLearningAgent:
         self._playerIndex = playerIndex
         self._debug = False
 
-    def start_episode(self, initial_hand, num_episode):
+    def start_episode(self, initial_hand, num_episode=0):
         """ Initialize game with assigned initial hand. """
 
         self._hand = initial_hand
@@ -39,6 +39,11 @@ class QLearningAgent:
         """ Save the model to the specified path. """
 
         self._qtable.qtable.to_csv(to_path, header=None)
+
+    def load_model(self, file_path):
+        """ Load model from file. """
+
+        self._qtable.restore_from_file(file_path)
 
     def do_step(self, already_played, board, always_use_best=False):
         """

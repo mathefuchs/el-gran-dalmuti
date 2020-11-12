@@ -38,6 +38,24 @@ class QTable:
             & (self.qtable.iloc[:, QTable.hand_indices] == hand).values, axis=1
         )
 
+    def restore_from_file(self, file_path):
+        """ Restores the q-table from file. """
+
+        # Read from file
+        self.qtable = pd.read_csv(file_path, header=None, index_col=None)
+        self.qtable = self.qtable.drop([0], axis=1)
+        rename_map = {}
+        for column in range(QTable.num_columns):
+            rename_map[column + 1] = column
+        self.qtable.rename(columns=rename_map, inplace=True)
+
+        # Set types
+        for column in range(QTable.state_columns):
+            self.qtable[column] = self.qtable[column].astype(np.int8)
+        for column in range(QTable.next_states):
+            self.qtable[QTable.state_columns + column] = \
+                self.qtable[column].astype(np.float32)
+
     def create_qtable_entry(self, already_played, board, hand):
         """ Creates a new qtable entry. """
 

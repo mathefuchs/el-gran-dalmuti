@@ -46,7 +46,7 @@ class QLearningAgentTest(unittest.TestCase):
         self.assertFalse(np.all(new_board == 0))
         self.assertTrue(np.all(agent._hand == 0))
         self.assertAlmostEqual(agent._qtable.get_qtable_entry(
-            already_played, board, hand).iloc[0, 0], 0.1)
+            already_played, board, hand).iloc[0, 0], agent._alpha)
         self.assertEqual(QLearningAgent.agents_finished, 1)
 
     def test_agent_has_to_pass(self):

@@ -42,7 +42,7 @@ def do_simulation(num_epochs):
             if np.all(new_already_played == already_played):
                 turns_passed_without_move += 1
 
-                if turns_passed_without_move == NUM_PLAYERS:
+                if turns_passed_without_move == NUM_PLAYERS - 1:
                     turns_passed_without_move = 0
                     new_board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
             else:
