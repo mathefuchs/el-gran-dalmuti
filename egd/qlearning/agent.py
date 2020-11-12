@@ -24,7 +24,7 @@ class QLearningAgent:
 
         self._qtable = QTable()
         self._playerIndex = playerIndex
-        self._debug = True
+        self._debug = False
 
     def start_episode(self, initial_hand, num_episode):
         """ Initialize game with assigned initial hand. """
@@ -34,6 +34,11 @@ class QLearningAgent:
         # amount of random decisions
         self._epsilon = 1 / np.sqrt(num_episode / 50 + 1)
         QLearningAgent.agents_finished = 0
+
+    def save_model(self, to_path):
+        """ Save the model to the specified path. """
+
+        self._qtable.qtable.to_csv(to_path, header=None)
 
     def do_step(self, already_played, board, always_use_best=False):
         """
@@ -81,12 +86,14 @@ class QLearningAgent:
         # Compute next state
         next_hand = possible_hands[action_index]
         next_board = possible_boards[action_index]
-        next_already_played = already_played + next_board
+        next_already_played = already_played + next_board \
+            if not np.all(next_board == board) else already_played
 
         # Retrieve next state's q-value
         next_qvalues = self._qtable.get_qtable_entry(
             next_already_played, next_board, next_hand)
-        next_max = np.nanmax(next_qvalues) if next_qvalues else 0
+        next_max = np.nanmax(next_qvalues) \
+            if np.any(next_qvalues != None) else 0
 
         # Determine reward
         if has_finished(next_hand):

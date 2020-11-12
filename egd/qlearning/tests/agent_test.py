@@ -49,6 +49,27 @@ class QLearningAgentTest(unittest.TestCase):
             already_played, board, hand).iloc[0, 0], 0.1)
         self.assertEqual(QLearningAgent.agents_finished, 1)
 
+    def test_agent_has_to_pass(self):
+        """ 
+            Agent has to pass his turn to the next 
+            player without playing any cards. 
+        """
+
+        agent = QLearningAgent(0)
+        agent._debug = False
+        hand = get_cards_array(5, 2)
+        agent.start_episode(hand, 0)
+
+        already_played = get_cards_array(2, 2)
+        board = get_cards_array(2, 2)
+        finished, new_already_played, new_board = \
+            agent.do_step(already_played, board)
+
+        self.assertFalse(finished)
+        self.assertTrue(np.all(new_already_played == already_played))
+        self.assertTrue(np.all(new_board == board))
+        self.assertTrue(np.all(agent._hand == hand))
+
 
 if __name__ == '__main__':
     unittest.main()
