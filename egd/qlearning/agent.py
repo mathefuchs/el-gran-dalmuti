@@ -13,7 +13,7 @@ class QLearningAgent:
     def __init__(self, playerIndex):
         """ Initialize an agent. """
 
-        self._alpha = 0.1  # learning rate
+        self._alpha = 0.5  # learning rate
         self._gamma = 0.95  # favour future rewards
         self._rewards = {
             0: 1.0,  # No other agent finished before
