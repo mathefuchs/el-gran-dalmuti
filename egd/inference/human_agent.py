@@ -75,7 +75,7 @@ class HumanAgent:
                 print("Invalid move.")
                 continue
 
-            if card_array_to_play in possible_boards \
+            if np.any(np.all(card_array_to_play == possible_boards, axis=1)) \
                     and not np.all(card_array_to_play == board):
                 self._hand -= card_array_to_play
                 next_board = card_array_to_play
