@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Hyperparameters for Training")
     parser.add_argument(
-        'epochs', default=10000, type=int, nargs="?",
+        'epochs', default=500, type=int, nargs="?",
         metavar='Number of simulated games.')
     args = parser.parse_args()
 
