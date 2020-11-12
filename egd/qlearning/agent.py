@@ -60,7 +60,7 @@ class QLearningAgent:
         # Retrieve Q-Table for current state and add new if necessary
         learned_values = self._qtable.get_qtable_entry(
             already_played, board, self._hand)
-        if not learned_values:
+        if not np.any(learned_values != None):
             self._qtable.create_qtable_entry(
                 already_played, board, self._hand)
             learned_values = self._qtable.get_qtable_entry(

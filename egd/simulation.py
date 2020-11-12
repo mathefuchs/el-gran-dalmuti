@@ -1,10 +1,14 @@
 import numpy as np
 import pandas as pd
 import argparse
+import tqdm
 
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
 from egd.qlearning.agent import QLearningAgent
+
+
+debug = False
 
 
 def do_simulation(num_epochs):
@@ -12,7 +16,7 @@ def do_simulation(num_epochs):
 
     agents = list(map(QLearningAgent, PLAYER))
 
-    for epoch in range(num_epochs):
+    for epoch in tqdm.tqdm(range(num_epochs)):
         # Generate and assign initial cards
         initial_cards = random_initial_cards()
         for playerIndex, agent in enumerate(agents):
@@ -31,7 +35,8 @@ def do_simulation(num_epochs):
                 agents[current_player_index].do_step(
                     already_played, board)
 
-            print("Player", current_player_index, "- Board:", new_board)
+            if debug:
+                print("Player", current_player_index, "- Board:", new_board)
 
             # Reset board after a complete round of no moves
             if np.all(new_already_played == already_played):
@@ -47,6 +52,10 @@ def do_simulation(num_epochs):
             current_player_index = (current_player_index + 1) % NUM_PLAYERS
             already_played = new_already_played
             board = new_board
+
+        # Log progress
+        if epoch % 100 == 0:
+            print("Game Simulation", epoch, "out of", num_epochs)
 
     # Save trained agents
     for playerIndex, agent in enumerate(agents):
