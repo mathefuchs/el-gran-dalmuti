@@ -44,7 +44,8 @@ class HumanAgent:
         # Possible actions; Pass if no possible play
         possible_hands, possible_boards = \
             possible_next_moves(self._hand, board)
-        if len(possible_hands) == 0:
+        if len(possible_hands) == 1 and \
+                np.all(possible_boards[0] == board):
             return False, already_played, board
 
         # Ask for action
