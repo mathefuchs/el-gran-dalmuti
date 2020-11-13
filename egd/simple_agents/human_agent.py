@@ -18,8 +18,14 @@ class HumanAgent:
 
         self._hand = initial_hand
 
-    def save_model(self, to_path):
+    def save_model(self):
         """ Save the model to the specified path. """
+
+        # NOP
+        pass
+
+    def load_model(self):
+        """ Load model from file. """
 
         # NOP
         pass

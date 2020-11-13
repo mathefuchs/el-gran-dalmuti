@@ -8,7 +8,7 @@ from egd.game.state import NUM_PLAYERS, random_initial_cards
 from egd.util import get_agent
 
 
-def do_simulation(agents, num_epochs, verbose, save_model):
+def do_simulation(agents, num_epochs, verbose, save_model, inference):
     """ Simulates a given number of games. """
 
     for epoch in tqdm.tqdm(range(num_epochs)):
@@ -35,7 +35,7 @@ def do_simulation(agents, num_epochs, verbose, save_model):
             finished, new_already_played, new_board = \
                 agents[current_player_index].do_step(
                     already_played, board, len(finished_players),
-                    always_use_best=True, print_luck=True)
+                    always_use_best=inference, print_luck=verbose)
 
             # Keep track of finished agents
             if finished and current_player_index not in finished_players:
@@ -78,9 +78,8 @@ def do_simulation(agents, num_epochs, verbose, save_model):
 
     # Save trained agents
     if save_model:
-        for playerIndex, agent in enumerate(agents):
-            agent.save_model("./egd/saved_agents/agent_"
-                             + str(playerIndex))
+        for agent in agents:
+            agent.save_model()
 
 
 if __name__ == '__main__':
@@ -103,14 +102,17 @@ if __name__ == '__main__':
         '--games', default="100", type=int, nargs="?",
         metavar='Number of games.')
     parser.add_argument(
-        '--verbose', default=False, type=int, nargs="?",
+        '--verbose', default=0, type=int, nargs="?",
         metavar='Use verbose logging.')
     parser.add_argument(
-        '--loadmodel', default=False, type=int, nargs="?",
+        '--loadmodel', default=0, type=int, nargs="?",
         metavar='Whether to load trained models.')
     parser.add_argument(
-        '--savemodel', default=False, type=int, nargs="?",
+        '--savemodel', default=0, type=int, nargs="?",
         metavar='Whether to save models.')
+    parser.add_argument(
+        '--inference', default=0, type=int, nargs="?",
+        metavar='Whether to use the agents in inference mode.')
     args = parser.parse_args()
 
     # Parse agents
@@ -124,4 +126,4 @@ if __name__ == '__main__':
 
     # Start simulation
     do_simulation(agents, args.games, (args.verbose == 1),
-                  (args.savemodel == 1))
+                  (args.savemodel == 1), (args.inference == 1))

@@ -32,15 +32,19 @@ class QLearningAgent:
         # amount of random decisions
         self._epsilon = 1 / np.sqrt(num_episode / 5 + 1)
 
-    def save_model(self, to_path):
+    def save_model(self):
         """ Save the model to the specified path. """
 
-        self._qtable.qtable.to_csv(to_path, header=None)
+        self._qtable.qtable.to_csv(
+            "./egd/saved_agents/qtable_agent_"
+            + str(self._playerIndex) + ".csv", header=None)
 
-    def load_model(self, file_path):
+    def load_model(self):
         """ Load model from file. """
 
-        self._qtable.restore_from_file(file_path)
+        self._qtable.restore_from_file(
+            "./egd/saved_agents/qtable_agent_"
+            + str(self._playerIndex) + ".csv")
 
     def do_step(self, already_played, board, agents_finished,
                 always_use_best=False, print_luck=False):

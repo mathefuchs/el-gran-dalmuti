@@ -7,16 +7,17 @@ def get_agent(player_index, agent_string, load_model):
     """ Get agent for string identifier. """
 
     if agent_string == "Human":
-        return HumanAgent(player_index)
+        agent = HumanAgent(player_index)
     elif agent_string == "Simple":
-        return SimpleAgent(player_index)
+        agent = SimpleAgent(player_index)
     elif agent_string == "QLearningAgent":
         agent = QLearningAgent(player_index)
-        if load_model:
-            agent.load_model("./egd/saved_agents/qtable-agent-" +
-                             str(player_index) + ".csv")
-        return agent
     elif agent_string == "DeepQAgent":
         raise NotImplementedError("Deep Q Agent has not been implemented yet.")
     else:
         raise Exception("Agent does not exist:", agent_string)
+
+    if load_model:
+        agent.load_model()
+
+    return agent
