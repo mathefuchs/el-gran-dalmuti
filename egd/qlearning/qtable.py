@@ -43,11 +43,6 @@ class QTable:
 
         # Read from file
         self.qtable = pd.read_csv(file_path, header=None, index_col=None)
-        self.qtable = self.qtable.drop([0], axis=1)
-        rename_map = {}
-        for column in range(QTable.num_columns):
-            rename_map[column + 1] = column
-        self.qtable.rename(columns=rename_map, inplace=True)
 
         # Set types
         for column in range(QTable.state_columns):

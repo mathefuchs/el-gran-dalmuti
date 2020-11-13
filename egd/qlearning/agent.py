@@ -30,14 +30,15 @@ class QLearningAgent:
         self._hand = initial_hand
         self._num_episode = num_episode
         # amount of random decisions
-        self._epsilon = 1 / np.sqrt(num_episode / 5 + 1)
+        self._epsilon = 1 / np.sqrt(num_episode / 5000 + 1)
 
     def save_model(self):
         """ Save the model to the specified path. """
 
         self._qtable.qtable.to_csv(
             "./egd/saved_agents/qtable_agent_"
-            + str(self._playerIndex) + ".csv", header=None)
+            + str(self._playerIndex) + ".csv",
+            header=None, index=False)
 
     def load_model(self):
         """ Load model from file. """
@@ -68,11 +69,6 @@ class QLearningAgent:
         # Retrieve Q-Table for current state and add new if necessary
         learned_values = self._qtable.get_qtable_entry(
             already_played, board, self._hand)
-        if not np.any(learned_values != None):
-            self._qtable.create_qtable_entry(
-                already_played, board, self._hand)
-            learned_values = self._qtable.get_qtable_entry(
-                already_played, board, self._hand)
 
         if self._debug:
             print("Player", self._playerIndex,
@@ -83,18 +79,22 @@ class QLearningAgent:
             action_index = np.random.choice(len(possible_hands))
         else:
             # Debug "luck"
-            if print_luck and np.all(learned_values.iloc[0, :] == 0):
+            if print_luck and (np.all(learned_values == None)
+                               or np.all(learned_values.iloc[0, :] == 0)):
                 print("Player", self._playerIndex,
                       "- Warning: Decision made randomly")
 
-            # Get best action with random tie-breaking
-            possible_qvalues = learned_values.iloc[
-                0, list(range(len(possible_hands)))
-            ]
-            action_index = np.random.choice(
-                np.flatnonzero(np.isclose(
-                    possible_qvalues, np.nanmax(possible_qvalues)
-                )))
+            if np.any(learned_values != None):
+                # Get best action with random tie-breaking
+                possible_qvalues = learned_values.iloc[
+                    0, list(range(len(possible_hands)))
+                ]
+                action_index = np.random.choice(
+                    np.flatnonzero(np.isclose(
+                        possible_qvalues, np.nanmax(possible_qvalues)
+                    )))
+            else:
+                action_index = np.random.randint(len(possible_hands))
 
         # Compute next state
         next_hand = possible_hands[action_index]
@@ -114,16 +114,25 @@ class QLearningAgent:
         else:
             reward_earned = 0
 
-        # Determine new value
-        def update_func(old_qvalues):
-            old_qvalue = old_qvalues.iloc[0, action_index]
-            new_value = (1 - self._alpha) * old_qvalue + \
-                self._alpha * (reward_earned + self._gamma * next_max)
-            old_qvalues.iloc[0, action_index] = new_value
-            return old_qvalues
+        # Only update if either old or new values are not all zero
+        if np.any(learned_values != None) or reward_earned != 0 or next_max != 0:
+            # Create Q-Table entry if necessary
+            if np.all(learned_values == None):
+                self._qtable.create_qtable_entry(
+                    already_played, board, self._hand)
+                learned_values = self._qtable.get_qtable_entry(
+                    already_played, board, self._hand)
 
-        self._qtable.update_qtable(
-            already_played, board, self._hand, update_func)
+            # Determine new value
+            def update_func(old_qvalues):
+                old_qvalue = old_qvalues.iloc[0, action_index]
+                new_value = (1 - self._alpha) * old_qvalue + \
+                    self._alpha * (reward_earned + self._gamma * next_max)
+                old_qvalues.iloc[0, action_index] = new_value
+                return old_qvalues
+
+            self._qtable.update_qtable(
+                already_played, board, self._hand, update_func)
 
         # Return next state
         self._hand = next_hand
