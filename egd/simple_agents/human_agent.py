@@ -13,12 +13,19 @@ class HumanAgent:
 
         self._playerIndex = playerIndex
 
-    def start_episode(self, initial_hand):
+    def start_episode(self, initial_hand, num_epoch=0):
         """ Initialize game with assigned initial hand. """
 
         self._hand = initial_hand
 
-    def do_step(self, already_played, board, always_use_best=True, print_luck=False):
+    def save_model(self, to_path):
+        """ Save the model to the specified path. """
+
+        # NOP
+        pass
+
+    def do_step(self, already_played, board, agents_finished,
+                always_use_best=True, print_luck=False):
         """
             Performs a step in the game based on human input.
 

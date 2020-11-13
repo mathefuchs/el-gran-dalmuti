@@ -22,7 +22,7 @@ class QLearningAgentTest(unittest.TestCase):
         finished, new_already_played, new_board = \
             agent.do_step(np.zeros(NUM_CARD_VALUES, dtype=np.int8),
                           np.zeros(NUM_CARD_VALUES, dtype=np.int8),
-                          always_use_best=True)  # Enforce deterministic behaviour
+                          0, always_use_best=True)  # Enforce deterministic behaviour
 
         self.assertFalse(finished)
         self.assertFalse(np.all(new_already_played == 0))
@@ -39,7 +39,7 @@ class QLearningAgentTest(unittest.TestCase):
         already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
         board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
         finished, new_already_played, new_board = \
-            agent.do_step(already_played, board)
+            agent.do_step(already_played, board, 0)
 
         self.assertTrue(finished)
         self.assertFalse(np.all(new_already_played == 0))
@@ -47,7 +47,6 @@ class QLearningAgentTest(unittest.TestCase):
         self.assertTrue(np.all(agent._hand == 0))
         self.assertAlmostEqual(agent._qtable.get_qtable_entry(
             already_played, board, hand).iloc[0, 0], agent._alpha)
-        self.assertEqual(QLearningAgent.agents_finished, 1)
 
     def test_agent_has_to_pass(self):
         """ 
@@ -63,7 +62,7 @@ class QLearningAgentTest(unittest.TestCase):
         already_played = get_cards_array(2, 2)
         board = get_cards_array(2, 2)
         finished, new_already_played, new_board = \
-            agent.do_step(already_played, board)
+            agent.do_step(already_played, board, 0)
 
         self.assertFalse(finished)
         self.assertTrue(np.all(new_already_played == already_played))

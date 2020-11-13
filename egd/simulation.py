@@ -4,17 +4,12 @@ import argparse
 import tqdm
 
 from egd.game.cards import NUM_CARD_VALUES
-from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
-from egd.qlearning.agent import QLearningAgent
+from egd.game.state import NUM_PLAYERS, random_initial_cards
+from egd.util import get_agent
 
 
-debug = False
-
-
-def do_simulation(num_epochs):
+def do_simulation(agents, num_epochs, verbose, save_model):
     """ Simulates a given number of games. """
-
-    agents = list(map(QLearningAgent, PLAYER))
 
     for epoch in tqdm.tqdm(range(num_epochs)):
         # Generate and assign initial cards
@@ -28,15 +23,35 @@ def do_simulation(num_epochs):
         board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
         turns_passed_without_move = 0
 
+        # Print intial board
+        if verbose:
+            print("                    1 2 3 4 5 6 7 8 9 . . . J")
+            print("Initial board:   ", board)
+
         # Game loop
-        while QLearningAgent.agents_finished < NUM_PLAYERS:
+        finished_players = []
+        while len(finished_players) < NUM_PLAYERS:
             # Perform a move
             finished, new_already_played, new_board = \
                 agents[current_player_index].do_step(
-                    already_played, board)
+                    already_played, board, len(finished_players),
+                    always_use_best=True, print_luck=True)
 
-            if debug:
-                print("Player", current_player_index, "- Board:", new_board)
+            # Keep track of finished agents
+            if finished and current_player_index not in finished_players:
+                finished_players.append(current_player_index)
+
+            # Print move
+            if verbose:
+                if finished:
+                    print("Player", current_player_index,
+                          "- Board:", new_board, "- Finished")
+                elif np.all(new_already_played == already_played):
+                    print("Player", current_player_index,
+                          "- Board:", new_board, "- Passed")
+                else:
+                    print("Player", current_player_index,
+                          "- Board:", new_board)
 
             # Reset board after a complete round of no moves
             if np.all(new_already_played == already_played):
@@ -45,6 +60,10 @@ def do_simulation(num_epochs):
                 if turns_passed_without_move == NUM_PLAYERS - 1:
                     turns_passed_without_move = 0
                     new_board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
+
+                    if verbose:
+                        print("                   1 2 3 4 5 6 7 8 9 . . . J")
+                        print("New board:       ", new_board)
             else:
                 turns_passed_without_move = 0
 
@@ -53,25 +72,56 @@ def do_simulation(num_epochs):
             already_played = new_already_played
             board = new_board
 
-        # Log progress
-        if epoch % 100 == 0:
-            print("Game Simulation", epoch, "out of", num_epochs)
+        # Game finished
+        if verbose:
+            print("Game finished - Player's Ranks", finished_players)
 
     # Save trained agents
-    for playerIndex, agent in enumerate(agents):
-        agent.save_model(
-            "./egd/saved-agents/qtable-agent-"
-            + str(playerIndex) + ".csv")
+    if save_model:
+        for playerIndex, agent in enumerate(agents):
+            agent.save_model("./egd/saved_agents/agent_"
+                             + str(playerIndex))
 
 
 if __name__ == '__main__':
     # Parse args
     parser = argparse.ArgumentParser(
-        description="Hyperparameters for Training")
+        description="Selection of Agents")
     parser.add_argument(
-        'epochs', default=1000, type=int, nargs="?",
-        metavar='Number of simulated games.')
+        '--player0', default="Human", type=str, nargs="?",
+        metavar='Type of player 0.')
+    parser.add_argument(
+        '--player1', default="QLearningAgent", type=str, nargs="?",
+        metavar='Type of player 1.')
+    parser.add_argument(
+        '--player2', default="QLearningAgent", type=str, nargs="?",
+        metavar='Type of player 2.')
+    parser.add_argument(
+        '--player3', default="QLearningAgent", type=str, nargs="?",
+        metavar='Type of player 3.')
+    parser.add_argument(
+        '--games', default="100", type=int, nargs="?",
+        metavar='Number of games.')
+    parser.add_argument(
+        '--verbose', default=False, type=int, nargs="?",
+        metavar='Use verbose logging.')
+    parser.add_argument(
+        '--loadmodel', default=False, type=int, nargs="?",
+        metavar='Whether to load trained models.')
+    parser.add_argument(
+        '--savemodel', default=False, type=int, nargs="?",
+        metavar='Whether to save models.')
     args = parser.parse_args()
 
+    # Parse agents
+    agent_strings = [args.player0, args.player1,
+                     args.player2, args.player3]
+    agents = []
+    for player_index in range(NUM_PLAYERS):
+        agents.append(get_agent(
+            player_index, agent_strings[player_index],
+            (args.loadmodel == 1)))
+
     # Start simulation
-    do_simulation(args.epochs)
+    do_simulation(agents, args.games, (args.verbose == 1),
+                  (args.savemodel == 1))

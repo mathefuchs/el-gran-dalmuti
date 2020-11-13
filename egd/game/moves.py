@@ -50,10 +50,10 @@ def possible_next_moves(hand, board):
                     possible_boards = np.vstack([possible_boards, new_board])
 
                 # Or you can play dirty (with Joker(s))
-                if card_type_in_hand != JOKER and hand[JOKER] > 0 and \
-                        card_type_in_hand < card_type_in_board and \
-                        hand[card_type_in_hand] > 0 and \
-                        hand[card_type_in_hand] + hand[JOKER] >= num_cards_in_board:
+                if card_type_in_hand != JOKER and hand[JOKER] > 0 \
+                        and card_type_in_hand < card_type_in_board \
+                        and num_cards_in_board >= 2 and hand[card_type_in_hand] > 0 \
+                        and hand[card_type_in_hand] + hand[JOKER] >= num_cards_in_board:
                     # Use one joker
                     if hand[card_type_in_hand] + 1 >= num_cards_in_board:
                         joker_vec = get_cards_array(JOKER, 1)
@@ -65,7 +65,7 @@ def possible_next_moves(hand, board):
                             [possible_boards, new_board])
 
                     # Use two jokers
-                    if hand[JOKER] == 2 and num_cards_in_board > 2:
+                    if hand[JOKER] == 2 and num_cards_in_board >= 3:
                         joker_vec = get_cards_array(JOKER, 2)
                         new_board = get_cards_array(
                             card_type_in_hand, num_cards_in_board - 2) + joker_vec

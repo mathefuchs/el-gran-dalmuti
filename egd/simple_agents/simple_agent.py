@@ -3,10 +3,9 @@ import pandas as pd
 
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
-from egd.qlearning.qtable import QTable
 
 
-class QLearningAgent:
+class SimpleAgent:
 
     def __init__(self, playerIndex):
         """ Initialize an agent. """
@@ -31,6 +30,7 @@ class QLearningAgent:
         self._num_episode = num_episode
         # amount of random decisions
         self._epsilon = 1 / np.sqrt(num_episode / 5 + 1)
+        QLearningAgent.agents_finished = 0
 
     def save_model(self, to_path):
         """ Save the model to the specified path. """
@@ -42,8 +42,7 @@ class QLearningAgent:
 
         self._qtable.restore_from_file(file_path)
 
-    def do_step(self, already_played, board, agents_finished,
-                always_use_best=False, print_luck=False):
+    def do_step(self, already_played, board, always_use_best=False, print_luck=False):
         """
             Performs a step in the game.
 
@@ -105,7 +104,8 @@ class QLearningAgent:
 
         # Determine reward
         if has_finished(next_hand):
-            reward_earned = self._rewards[agents_finished]
+            reward_earned = self._rewards[QLearningAgent.agents_finished]
+            QLearningAgent.agents_finished += 1
         else:
             reward_earned = 0
 
