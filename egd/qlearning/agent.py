@@ -30,7 +30,7 @@ class QLearningAgent:
         self._hand = initial_hand
         self._num_episode = num_episode
         # amount of random decisions
-        self._epsilon = 1 / np.sqrt(num_episode / 5000 + 1)
+        self._epsilon = 1 / np.sqrt(num_episode / 2000 + 1)
 
     def save_model(self):
         """ Save the model to the specified path. """

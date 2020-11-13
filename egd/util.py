@@ -1,5 +1,6 @@
 from egd.simple_agents.human_agent import HumanAgent
 from egd.simple_agents.simple_agent import SimpleAgent
+from egd.simple_agents.random_agent import RandomAgent
 from egd.qlearning.agent import QLearningAgent
 
 
@@ -10,6 +11,8 @@ def get_agent(player_index, agent_string, load_model):
         agent = HumanAgent(player_index)
     elif agent_string == "Simple":
         agent = SimpleAgent(player_index)
+    elif agent_string == "Random":
+        agent = RandomAgent(player_index)
     elif agent_string == "QLearningAgent":
         agent = QLearningAgent(player_index)
     elif agent_string == "DeepQAgent":

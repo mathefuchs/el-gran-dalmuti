@@ -5,7 +5,7 @@ from egd.game.state import has_finished
 from egd.game.moves import possible_next_moves
 
 
-class SimpleAgent:
+class RandomAgent:
 
     def __init__(self, playerIndex):
         """ Initialize an agent. """
@@ -48,9 +48,8 @@ class SimpleAgent:
                 np.all(possible_boards[0] == board):
             return False, already_played, board
 
-        # Either take first action if board empty
-        # (no pass move in list) or second action
-        action_index = 0 if np.all(board == 0) else 1
+        # Decide randomly
+        action_index = np.random.randint(len(possible_hands))
 
         # Compute next state
         next_hand = possible_hands[action_index]
