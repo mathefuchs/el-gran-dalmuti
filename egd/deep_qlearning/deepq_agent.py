@@ -90,11 +90,13 @@ class DeepQAgent:
     def save_model(self):
         """ Save the model to the specified path. """
 
+        print("Save Trained Deep Q Model.")
         self.network.save("./egd/saved_agents/deepq.h5")
 
     def load_model(self):
         """ Load model from file. """
 
+        print("Load Deep Q Model from file.")
         self.network = models.load_model("./egd/saved_agents/deepq.h5")
 
     def convert_to_data_batch(self, already_played, board, hand, actions):
@@ -120,7 +122,7 @@ class DeepQAgent:
         self.network.fit(
             self.convert_to_data_batch(already_played, board, hand, [action]),
             np.array([[updated_q_value]]),
-            epochs=weight
+            epochs=weight, verbose=(1 if self.debug else 0)
         )
 
     def predict_q_values_from_network(self, already_played, board, hand, actions):
@@ -204,7 +206,7 @@ class DeepQAgent:
         self.fit_value_to_network(
             already_played, board, self.hand,
             self.hand - possible_hands[action_index],
-            new_qvalue
+            new_qvalue, weight=(10 if reward_earned != 0 else 1)
         )
 
         # Return next state
