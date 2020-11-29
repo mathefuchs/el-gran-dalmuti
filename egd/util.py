@@ -17,7 +17,7 @@ def get_agent(player_index, agent_string, load_model):
     elif agent_string == "QLearningAgent":
         agent = QLearningAgent(player_index)
     elif agent_string == "DeepQAgent":
-        agent = DeepQAgent(player_index)
+        agent = DeepQAgent(player_index, create_model=(not load_model))
     else:
         raise Exception("Agent does not exist:", agent_string)
 

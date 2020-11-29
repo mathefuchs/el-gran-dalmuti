@@ -16,7 +16,7 @@ from egd.game.moves import possible_next_moves
 
 class DeepQAgent:
 
-    def __init__(self, playerIndex):
+    def __init__(self, playerIndex, create_model=True):
         """ Initialize an agent. """
 
         self.alpha = 0.5  # learning rate
@@ -33,7 +33,8 @@ class DeepQAgent:
         self.debug = False
 
         # Initialize model
-        self._create_model()
+        if create_model:
+            self._create_model()
 
     def _create_model(self):
         """ Create model for predicting q-values. """
@@ -89,14 +90,12 @@ class DeepQAgent:
     def save_model(self):
         """ Save the model to the specified path. """
 
-        # TODO Implement saving
-        pass
+        self.network.save("./egd/saved_agents/deepq.h5")
 
     def load_model(self):
         """ Load model from file. """
 
-        # TODO Implement loading
-        pass
+        self.network = models.load_model("./egd/saved_agents/deepq.h5")
 
     def convert_to_data_batch(self, already_played, board, hand, actions):
         """ Converts the given arrays to a representation understood by the model. """
