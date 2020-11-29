@@ -9,6 +9,7 @@ import pandas as pd
 from keras import models
 from keras import layers
 
+from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
 
@@ -23,8 +24,8 @@ class DeepQAgent:
         self.exploration_decay_rate = 1 / 2000
         self.rewards = {
             0: 1.0,  # No other agent finished before
-            1: 0.6,  # One other agent finished before
-            2: 0.5,  # Two other agents finished before
+            1: 0.4,  # One other agent finished before
+            2: 0.3,  # Two other agents finished before
             3: -1.0,  # Three other agents finished before
         }
 
@@ -151,7 +152,18 @@ class DeepQAgent:
 
         # Do random decisions with a fixed probability
         if not always_use_best and np.random.uniform() < self.epsilon:
+            # Chose action randomly
             action_index = np.random.choice(len(possible_hands))
+
+            # Get q-value estimate only for chosen action
+            possible_qvalue_action = self.predict_q_values_from_network(
+                already_played, board, self.hand,
+                self.hand - possible_hands[action_index]
+            )[0]
+
+            # Shift value
+            possible_qvalues = np.zeros(NUM_CARD_VALUES)
+            possible_qvalues[action_index] = possible_qvalue_action
         else:
             # Get predictions for all possible actions
             possible_qvalues = self.predict_q_values_from_network(
@@ -171,7 +183,31 @@ class DeepQAgent:
         next_already_played = already_played + next_board \
             if not np.all(next_board == board) else already_played
 
-        # TODO
+        # Retrieve next state's max q-value
+        next_possible_hands, _ = \
+            possible_next_moves(next_hand, next_board)
+        next_qvalues = self.predict_q_values_from_network(
+            next_already_played, next_board, next_hand,
+            next_hand - next_possible_hands)
+        next_max = np.nanmax(next_qvalues)
+
+        # Determine reward
+        if has_finished(next_hand):
+            reward_earned = self.rewards[agents_finished]
+        else:
+            reward_earned = 0
+
+        # Determine new q-value
+        old_qvalue = possible_qvalues[action_index]
+        new_qvalue = (1 - self.alpha) * old_qvalue + \
+            self.alpha * (reward_earned + self.gamma * next_max)
+
+        # Fit neural net to newly observed reward estimate
+        self.fit_value_to_network(
+            already_played, board, self.hand,
+            self.hand - possible_hands[action_index],
+            new_qvalue
+        )
 
         # Return next state
         self.hand = next_hand
