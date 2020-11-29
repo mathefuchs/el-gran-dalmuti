@@ -20,6 +20,7 @@ class DeepQAgent:
 
         self.alpha = 0.5  # learning rate
         self.gamma = 0.95  # favour future rewards
+        self.exploration_decay_rate = 1 / 2000
         self.rewards = {
             0: 1.0,  # No other agent finished before
             1: 0.6,  # One other agent finished before
@@ -72,7 +73,8 @@ class DeepQAgent:
 
         # Compile neural network, use mean-squared error
         self.network.compile(
-            loss='mse', optimizer='RMSprop', metrics=['mse'])
+            loss='mse', optimizer='RMSprop', metrics=['mse']
+        )
 
     def start_episode(self, initial_hand, num_episode=0):
         """ Initialize game with assigned initial hand. """
@@ -80,7 +82,8 @@ class DeepQAgent:
         self.hand = initial_hand
         self.num_episode = num_episode
         # amount of random decisions
-        self.epsilon = 1 / np.sqrt(num_episode / 2000 + 1)
+        self.epsilon = 1 / np.sqrt(
+            num_episode * self.exploration_decay_rate + 1)
 
     def save_model(self):
         """ Save the model to the specified path. """
@@ -93,6 +96,34 @@ class DeepQAgent:
 
         # TODO Implement loading
         pass
+
+    def convert_to_data_batch(self, already_played, board, hand, action):
+        """ Converts the given arrays to a representation understood by the model. """
+
+        def enclose_by_list(li): return [li]
+        return np.stack([[
+            np.array(list(map(enclose_by_list, already_played))),
+            np.array(list(map(enclose_by_list, board))),
+            np.array(list(map(enclose_by_list, hand))),
+            np.array(list(map(enclose_by_list, action))),
+        ]], axis=0)
+
+    def fit_value_to_network(self, already_played, board, hand, action,
+                             updated_q_value, weight=1):
+        """ Fits a measured q-value to the neural net. """
+
+        self.network.fit(
+            self.convert_to_data_batch(already_played, board, hand, action),
+            np.array([[updated_q_value]]),
+            epochs=weight
+        )
+
+    def predict_q_value_from_network(self, already_played, board, hand, action):
+        """ Predicts q-value from trained neural net. """
+
+        return self.network.predict(
+            self.convert_to_data_batch(already_played, board, hand, action)
+        )[0, 0]
 
     def do_step(self, already_played, board, agents_finished,
                 always_use_best=False, print_luck=False):
