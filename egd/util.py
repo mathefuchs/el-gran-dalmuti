@@ -2,6 +2,7 @@ from egd.simple_agents.human_agent import HumanAgent
 from egd.simple_agents.simple_agent import SimpleAgent
 from egd.simple_agents.random_agent import RandomAgent
 from egd.qlearning.agent import QLearningAgent
+from egd.deep_qlearning.deepq_agent import DeepQAgent
 
 
 def get_agent(player_index, agent_string, load_model):
@@ -16,7 +17,7 @@ def get_agent(player_index, agent_string, load_model):
     elif agent_string == "QLearningAgent":
         agent = QLearningAgent(player_index)
     elif agent_string == "DeepQAgent":
-        raise NotImplementedError("Deep Q Agent has not been implemented yet.")
+        agent = DeepQAgent(player_index)
     else:
         raise Exception("Agent does not exist:", agent_string)
 

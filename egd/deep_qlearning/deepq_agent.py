@@ -153,17 +153,14 @@ class DeepQAgent:
         # Do random decisions with a fixed probability
         if not always_use_best and np.random.uniform() < self.epsilon:
             # Chose action randomly
+            random_choice = True
             action_index = np.random.choice(len(possible_hands))
 
             # Get q-value estimate only for chosen action
-            possible_qvalue_action = self.predict_q_values_from_network(
+            possible_qvalues = self.predict_q_values_from_network(
                 already_played, board, self.hand,
                 self.hand - possible_hands[action_index]
             )[0]
-
-            # Shift value
-            possible_qvalues = np.zeros(NUM_CARD_VALUES)
-            possible_qvalues[action_index] = possible_qvalue_action
         else:
             # Get predictions for all possible actions
             possible_qvalues = self.predict_q_values_from_network(
@@ -172,6 +169,7 @@ class DeepQAgent:
             )
 
             # Get best action with random tie-breaking
+            random_choice = False
             action_index = np.random.choice(
                 np.flatnonzero(np.isclose(
                     possible_qvalues, np.nanmax(possible_qvalues)
@@ -198,7 +196,8 @@ class DeepQAgent:
             reward_earned = 0
 
         # Determine new q-value
-        old_qvalue = possible_qvalues[action_index]
+        old_qvalue = possible_qvalues[action_index] \
+            if not random_choice else possible_qvalues
         new_qvalue = (1 - self.alpha) * old_qvalue + \
             self.alpha * (reward_earned + self.gamma * next_max)
 
