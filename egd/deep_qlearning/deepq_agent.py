@@ -97,33 +97,38 @@ class DeepQAgent:
         # TODO Implement loading
         pass
 
-    def convert_to_data_batch(self, already_played, board, hand, action):
+    def convert_to_data_batch(self, already_played, board, hand, actions):
         """ Converts the given arrays to a representation understood by the model. """
 
-        def enclose_by_list(li): return [li]
-        return np.stack([[
-            np.array(list(map(enclose_by_list, already_played))),
-            np.array(list(map(enclose_by_list, board))),
-            np.array(list(map(enclose_by_list, hand))),
-            np.array(list(map(enclose_by_list, action))),
-        ]], axis=0)
+        enc_already_played = np.resize(already_played, (13, 1))
+        enc_board = np.resize(board, (13, 1))
+        enc_hand = np.resize(hand, (13, 1))
+
+        stack_list = []
+        for action in actions:
+            stack_list.append([
+                enc_already_played, enc_board,
+                enc_hand, np.resize(action, (13, 1))
+            ])
+
+        return np.stack(stack_list, axis=0)
 
     def fit_value_to_network(self, already_played, board, hand, action,
                              updated_q_value, weight=1):
         """ Fits a measured q-value to the neural net. """
 
         self.network.fit(
-            self.convert_to_data_batch(already_played, board, hand, action),
+            self.convert_to_data_batch(already_played, board, hand, [action]),
             np.array([[updated_q_value]]),
             epochs=weight
         )
 
-    def predict_q_value_from_network(self, already_played, board, hand, action):
-        """ Predicts q-value from trained neural net. """
+    def predict_q_values_from_network(self, already_played, board, hand, actions):
+        """ Predicts q-values from the trained neural net. """
 
         return self.network.predict(
-            self.convert_to_data_batch(already_played, board, hand, action)
-        )[0, 0]
+            self.convert_to_data_batch(already_played, board, hand, actions)
+        ).flatten()
 
     def do_step(self, already_played, board, agents_finished,
                 always_use_best=False, print_luck=False):
@@ -144,15 +149,29 @@ class DeepQAgent:
                 np.all(possible_boards[0] == board):
             return False, already_played, board
 
-        # Policy
-        # TODO
-        action_index = 0
+        # Do random decisions with a fixed probability
+        if not always_use_best and np.random.uniform() < self.epsilon:
+            action_index = np.random.choice(len(possible_hands))
+        else:
+            # Get predictions for all possible actions
+            possible_qvalues = self.predict_q_values_from_network(
+                already_played, board, self.hand,
+                self.hand - possible_hands  # Possible actions
+            )
+
+            # Get best action with random tie-breaking
+            action_index = np.random.choice(
+                np.flatnonzero(np.isclose(
+                    possible_qvalues, np.nanmax(possible_qvalues)
+                )))
 
         # Compute next state
         next_hand = possible_hands[action_index]
         next_board = possible_boards[action_index]
         next_already_played = already_played + next_board \
             if not np.all(next_board == board) else already_played
+
+        # TODO
 
         # Return next state
         self.hand = next_hand
