@@ -93,6 +93,11 @@ def do_simulation(agents, num_epochs, verbose, save_model, inference):
         if verbose:
             print("Game finished - Player's Ranks", finished_players)
 
+        # Save every 100 epochs
+        if save_model and epoch % 100 == 0:
+            for agent in agents:
+                agent.save_model()
+
     # Save trained agents
     if save_model:
         for agent in agents:
