@@ -16,7 +16,7 @@ class QLearningAgentTest(unittest.TestCase):
         initial_cards = random_initial_cards()
 
         agent = QLearningAgent(0)
-        agent._debug = False
+        agent.debug = False
         agent.start_episode(initial_cards[0], 0)
 
         finished, new_already_played, new_board = \
@@ -32,7 +32,7 @@ class QLearningAgentTest(unittest.TestCase):
         """ Performs final step and checks state. """
 
         agent = QLearningAgent(0)
-        agent._debug = False
+        agent.debug = False
         hand = get_cards_array(2, 1)
         agent.start_episode(hand, 0)
 
@@ -44,9 +44,9 @@ class QLearningAgentTest(unittest.TestCase):
         self.assertTrue(finished)
         self.assertFalse(np.all(new_already_played == 0))
         self.assertFalse(np.all(new_board == 0))
-        self.assertTrue(np.all(agent._hand == 0))
-        self.assertAlmostEqual(agent._qtable.get_qtable_entry(
-            already_played, board, hand).iloc[0, 0], agent._alpha)
+        self.assertTrue(np.all(agent.hand == 0))
+        self.assertAlmostEqual(agent.qtable.get_qtable_entry(
+            already_played, board, hand).iloc[0, 0], agent.alpha)
 
     def test_agent_has_to_pass(self):
         """ 
@@ -55,7 +55,7 @@ class QLearningAgentTest(unittest.TestCase):
         """
 
         agent = QLearningAgent(0)
-        agent._debug = False
+        agent.debug = False
         hand = get_cards_array(5, 2)
         agent.start_episode(hand, 0)
 
@@ -67,7 +67,7 @@ class QLearningAgentTest(unittest.TestCase):
         self.assertFalse(finished)
         self.assertTrue(np.all(new_already_played == already_played))
         self.assertTrue(np.all(new_board == board))
-        self.assertTrue(np.all(agent._hand == hand))
+        self.assertTrue(np.all(agent.hand == hand))
 
 
 if __name__ == '__main__':

@@ -154,6 +154,37 @@ class MovesTest(unittest.TestCase):
             [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ])))
 
+    def test_possible_next_moves_bug_one_joker(self):
+        """ Tests that a historic bug does not occur again. """
+
+        hand = np.array([
+            0, 1, 0, 0, 0, 1, 0, 0, 2, 4, 2, 4, 1
+        ], dtype=np.int8)
+        board = np.array([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+        ], dtype=np.int8)
+        next_hands, next_boards = possible_next_moves(
+            hand, board)
+
+        self.assertTrue(np.all(next_hands == np.array([
+            [0, 1, 0, 0, 0, 1, 0, 0, 2, 4, 2, 4, 1],
+            [0, 1, 0, 0, 0, 1, 0, 0, 2, 4, 2, 3, 1],
+            [0, 1, 0, 0, 0, 1, 0, 0, 2, 4, 1, 4, 1],
+            [0, 1, 0, 0, 0, 1, 0, 0, 2, 3, 2, 4, 1],
+            [0, 1, 0, 0, 0, 1, 0, 0, 1, 4, 2, 4, 1],
+            [0, 1, 0, 0, 0, 0, 0, 0, 2, 4, 2, 4, 1],
+            [0, 0, 0, 0, 0, 1, 0, 0, 2, 4, 2, 4, 1],
+        ])))
+        self.assertTrue(np.all(next_boards == np.array([
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ])))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -36,7 +36,9 @@ def possible_next_moves(hand, board):
     # Move has to match current board
     else:
         card_type_in_board = np.argmax(board)
-        num_cards_in_board = board[card_type_in_board] + board[JOKER]
+        num_cards_in_board = board[card_type_in_board] \
+            if card_type_in_board == JOKER \
+            else board[card_type_in_board] + board[JOKER]
 
         if not has_finished(hand):
             for card_type_in_hand in range(NUM_CARD_VALUES - 1, -1, -1):
