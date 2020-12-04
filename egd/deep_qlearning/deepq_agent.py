@@ -23,10 +23,10 @@ class DeepQAgent:
         self.gamma = 0.95  # favour future rewards
         self.exploration_decay_rate = 1 / 20000
         self.rewards = {
-            0: 1.0,  # No other agent finished before
-            1: 0.5,  # One other agent finished before
-            2: 0.4,  # Two other agents finished before
-            3: -1.0,  # Three other agents finished before
+            0: 10.0,  # No other agent finished before
+            1: 5.0,  # One other agent finished before
+            2: 4.0,  # Two other agents finished before
+            3: -10.0,  # Three other agents finished before
         }
 
         self.playerIndex = playerIndex
@@ -199,7 +199,7 @@ class DeepQAgent:
         if has_finished(next_hand):
             reward_earned = self.rewards[agents_finished]
         elif next_action_wins_board(next_already_played, next_board):
-            reward_earned = 0.15
+            reward_earned = 1.5
         else:
             reward_earned = 0.0
 
@@ -213,7 +213,7 @@ class DeepQAgent:
         self.fit_value_to_network(
             already_played, board, self.hand,
             self.hand - possible_hands[action_index],
-            new_qvalue, weight=(10 if reward_earned != 0 else 1)
+            new_qvalue, weight=1
         )
 
         # Return next state
