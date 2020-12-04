@@ -49,10 +49,9 @@ class HumanAgent:
             return True, already_played, board
 
         # Possible actions; Pass if no possible play
-        possible_hands, possible_boards = \
-            possible_next_moves(self.hand, board)
-        if len(possible_hands) == 1 and \
-                np.all(possible_boards[0] == board):
+        possible_actions = possible_next_moves(self.hand, board)
+        if len(possible_actions) == 1 and \
+                np.all(possible_actions[0] == 0):
             return False, already_played, board
 
         # Ask for action
@@ -90,7 +89,7 @@ class HumanAgent:
                 print("Invalid move.")
                 continue
 
-            if np.any(np.all(card_array_to_play == possible_boards, axis=1)) \
+            if np.any(np.all(card_array_to_play == possible_actions, axis=1)) \
                     and not np.all(card_array_to_play == board):
                 self.hand -= card_array_to_play
                 next_board = card_array_to_play

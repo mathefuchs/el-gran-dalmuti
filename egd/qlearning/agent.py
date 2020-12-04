@@ -61,10 +61,9 @@ class QLearningAgent:
             return True, already_played, board
 
         # Possible actions; Pass if no possible play
-        possible_hands, possible_boards = \
-            possible_next_moves(self.hand, board)
-        if len(possible_hands) == 1 and \
-                np.all(possible_boards[0] == board):
+        possible_actions = possible_next_moves(self.hand, board)
+        if len(possible_actions) == 1 and \
+                np.all(possible_actions[0] == 0):
             return False, already_played, board
 
         # Retrieve Q-Table for current state and add new if necessary
@@ -77,7 +76,7 @@ class QLearningAgent:
 
         # Do random decisions with a fixed probability
         if not always_use_best and np.random.uniform() < self.epsilon:
-            action_index = np.random.choice(len(possible_hands))
+            action_index = np.random.choice(len(possible_actions))
         else:
             # Debug "luck"
             if print_luck and (np.all(learned_values == None)
@@ -88,20 +87,20 @@ class QLearningAgent:
             if np.any(learned_values != None):
                 # Get best action with random tie-breaking
                 possible_qvalues = learned_values.iloc[
-                    0, list(range(len(possible_hands)))
+                    0, list(range(len(possible_actions)))
                 ]
                 action_index = np.random.choice(
                     np.flatnonzero(np.isclose(
                         possible_qvalues, np.nanmax(possible_qvalues)
                     )))
             else:
-                action_index = np.random.randint(len(possible_hands))
+                action_index = np.random.randint(len(possible_actions))
 
         # Compute next state
-        next_hand = possible_hands[action_index]
-        next_board = possible_boards[action_index]
-        next_already_played = already_played + next_board \
-            if not np.all(next_board == board) else already_played
+        action_taken = possible_actions[action_index]
+        next_hand = self.hand - action_taken
+        next_board = board if np.all(action_taken == 0) else action_taken
+        next_already_played = already_played + action_taken
 
         # Retrieve next state's q-value
         next_qvalues = self.qtable.get_qtable_entry(

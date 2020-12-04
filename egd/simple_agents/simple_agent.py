@@ -43,21 +43,20 @@ class SimpleAgent:
             return True, already_played, board
 
         # Possible actions; Pass if no possible play
-        possible_hands, possible_boards = \
-            possible_next_moves(self.hand, board)
-        if len(possible_hands) == 1 and \
-                np.all(possible_boards[0] == board):
+        possible_actions = possible_next_moves(self.hand, board)
+        if len(possible_actions) == 1 and \
+                np.all(possible_actions[0] == 0):
             return False, already_played, board
 
         # Either take first action if board empty
         # (no pass move in list) or second action
         action_index = 0 if np.all(board == 0) else 1
+        action_taken = possible_actions[action_index]
 
         # Compute next state
-        next_hand = possible_hands[action_index]
-        next_board = possible_boards[action_index]
-        next_already_played = already_played + next_board \
-            if not np.all(next_board == board) else already_played
+        next_hand = self.hand - action_taken
+        next_board = board if np.all(action_taken == 0) else action_taken
+        next_already_played = already_played + action_taken
 
         # Return next state
         self.hand = next_hand

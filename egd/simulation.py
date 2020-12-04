@@ -5,7 +5,7 @@ import tqdm
 
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, random_initial_cards
-from egd.game.moves import possible_next_moves
+from egd.game.moves import possible_next_moves, only_passing_possible
 from egd.util import get_agent
 
 
@@ -38,8 +38,8 @@ def do_simulation(agents, num_epochs, verbose, save_model, inference):
                                 NUM_PLAYERS for i in range(1, NUM_PLAYERS)]
                 next_player_index = 0
 
-                while next_player_index < NUM_PLAYERS - 1 and len(possible_next_moves(
-                        agents[next_players[next_player_index]].hand, next_board)[0]) == 1:
+                while next_player_index < NUM_PLAYERS - 1 and only_passing_possible(
+                        agents[next_players[next_player_index]].hand, next_board):
                     next_player_index += 1
 
                 if next_player_index == NUM_PLAYERS - 1:
