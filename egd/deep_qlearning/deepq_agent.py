@@ -168,13 +168,17 @@ class DeepQAgent:
                 already_played, board, self.hand,
                 self.hand - possible_hands  # Possible actions
             )
+            close_to_max = np.isclose(possible_qvalues,
+                                      np.nanmax(possible_qvalues))
+
+            # Debug "luck"
+            if print_luck and np.count_nonzero(close_to_max) > 1:
+                print("Player", self.playerIndex,
+                      "- Warning: Decision made randomly")
 
             # Get best action with random tie-breaking
             random_choice = False
-            action_index = np.random.choice(
-                np.flatnonzero(np.isclose(
-                    possible_qvalues, np.nanmax(possible_qvalues)
-                )))
+            action_index = np.random.choice(np.flatnonzero(close_to_max))
 
         # Compute next state
         next_hand = possible_hands[action_index]
