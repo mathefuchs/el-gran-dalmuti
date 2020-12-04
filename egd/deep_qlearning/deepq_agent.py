@@ -187,33 +187,35 @@ class DeepQAgent:
         next_board = board if np.all(action_taken == 0) else action_taken
         next_already_played = already_played + action_taken
 
-        # Retrieve next state's max q-value
-        next_possible_actions = \
-            possible_next_moves(next_hand, next_board)
-        next_qvalues = self.predict_q_values_from_network(
-            next_already_played, next_board, next_hand,
-            next_possible_actions)
-        next_max = np.nanmax(next_qvalues)
+        # Do not train in inference mode
+        if not always_use_best:
+            # Retrieve next state's max q-value
+            next_possible_actions = \
+                possible_next_moves(next_hand, next_board)
+            next_qvalues = self.predict_q_values_from_network(
+                next_already_played, next_board, next_hand,
+                next_possible_actions)
+            next_max = np.nanmax(next_qvalues)
 
-        # Determine reward
-        if has_finished(next_hand):
-            reward_earned = self.rewards[agents_finished]
-        elif next_action_wins_board(next_already_played, next_board):
-            reward_earned = 1.5
-        else:
-            reward_earned = 0.0
+            # Determine reward
+            if has_finished(next_hand):
+                reward_earned = self.rewards[agents_finished]
+            elif next_action_wins_board(next_already_played, next_board):
+                reward_earned = 1.5
+            else:
+                reward_earned = 0.0
 
-        # Determine new q-value
-        old_qvalue = possible_qvalues[action_index] \
-            if not random_choice else possible_qvalues
-        new_qvalue = (1 - self.alpha) * old_qvalue + \
-            self.alpha * (reward_earned + self.gamma * next_max)
+            # Determine new q-value
+            old_qvalue = possible_qvalues[action_index] \
+                if not random_choice else possible_qvalues
+            new_qvalue = (1 - self.alpha) * old_qvalue + \
+                self.alpha * (reward_earned + self.gamma * next_max)
 
-        # Fit neural net to newly observed reward estimate
-        self.fit_value_to_network(
-            already_played, board, self.hand,
-            action_taken, new_qvalue, weight=1
-        )
+            # Fit neural net to newly observed reward estimate
+            self.fit_value_to_network(
+                already_played, board, self.hand,
+                action_taken, new_qvalue, weight=1
+            )
 
         # Return next state
         self.hand = next_hand
