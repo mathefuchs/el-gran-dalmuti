@@ -21,11 +21,11 @@ class DeepQAgent:
 
         self.alpha = 0.5  # learning rate
         self.gamma = 0.95  # favour future rewards
-        self.exploration_decay_rate = 1 / 2000
+        self.exploration_decay_rate = 1 / 20000
         self.rewards = {
             0: 1.0,  # No other agent finished before
-            1: 0.4,  # One other agent finished before
-            2: 0.3,  # Two other agents finished before
+            1: 0.5,  # One other agent finished before
+            2: 0.4,  # Two other agents finished before
             3: -1.0,  # Three other agents finished before
         }
 
@@ -133,6 +133,7 @@ class DeepQAgent:
         ).flatten()
 
     def do_step(self, already_played, board, agents_finished,
+                next_action_wins_board=lambda a, b: False,
                 always_use_best=False, print_luck=False):
         """
             Performs a step in the game.
@@ -197,8 +198,10 @@ class DeepQAgent:
         # Determine reward
         if has_finished(next_hand):
             reward_earned = self.rewards[agents_finished]
+        elif next_action_wins_board(next_already_played, next_board):
+            reward_earned = 0.15
         else:
-            reward_earned = 0
+            reward_earned = 0.0
 
         # Determine new q-value
         old_qvalue = possible_qvalues[action_index] \

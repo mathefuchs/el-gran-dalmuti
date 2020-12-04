@@ -10,12 +10,12 @@ class RandomAgent:
     def __init__(self, playerIndex):
         """ Initialize an agent. """
 
-        self._playerIndex = playerIndex
+        self.playerIndex = playerIndex
 
     def start_episode(self, initial_hand, num_episode=0):
         """ Initialize game with assigned initial hand. """
 
-        self._hand = initial_hand
+        self.hand = initial_hand
 
     def save_model(self):
         """ Save the model to the specified path. """
@@ -30,6 +30,7 @@ class RandomAgent:
         pass
 
     def do_step(self, already_played, board, agents_finished,
+                next_action_wins_board=lambda a, b: False,
                 always_use_best=True, print_luck=False):
         """
             Performs a step in the game.
@@ -38,12 +39,12 @@ class RandomAgent:
         """
 
         # If player has already finished, pass
-        if has_finished(self._hand):
+        if has_finished(self.hand):
             return True, already_played, board
 
         # Possible actions; Pass if no possible play
         possible_hands, possible_boards = \
-            possible_next_moves(self._hand, board)
+            possible_next_moves(self.hand, board)
         if len(possible_hands) == 1 and \
                 np.all(possible_boards[0] == board):
             return False, already_played, board
@@ -58,5 +59,5 @@ class RandomAgent:
             if not np.all(next_board == board) else already_played
 
         # Return next state
-        self._hand = next_hand
-        return has_finished(self._hand), next_already_played, next_board
+        self.hand = next_hand
+        return has_finished(self.hand), next_already_played, next_board

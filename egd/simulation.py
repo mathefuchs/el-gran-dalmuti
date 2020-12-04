@@ -5,6 +5,7 @@ import tqdm
 
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, random_initial_cards
+from egd.game.moves import possible_next_moves
 from egd.util import get_agent
 
 
@@ -31,10 +32,26 @@ def do_simulation(agents, num_epochs, verbose, save_model, inference):
         # Game loop
         finished_players = []
         while len(finished_players) < NUM_PLAYERS:
+            # Check whether action wins board
+            def next_action_wins_board(next_already_played, next_board):
+                next_players = [(current_player_index + i) %
+                                NUM_PLAYERS for i in range(1, NUM_PLAYERS)]
+                next_player_index = 0
+
+                while next_player_index < NUM_PLAYERS - 1 and len(possible_next_moves(
+                        agents[next_players[next_player_index]].hand, next_board)[0]) == 1:
+                    next_player_index += 1
+
+                if next_player_index == NUM_PLAYERS - 1:
+                    return True
+                else:
+                    return False
+
             # Perform a move
             finished, new_already_played, new_board = \
                 agents[current_player_index].do_step(
                     already_played, board, len(finished_players),
+                    next_action_wins_board=next_action_wins_board,
                     always_use_best=inference, print_luck=verbose)
 
             # Keep track of finished agents

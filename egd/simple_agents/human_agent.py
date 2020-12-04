@@ -11,12 +11,12 @@ class HumanAgent:
     def __init__(self, playerIndex):
         """ Initialize an agent. """
 
-        self._playerIndex = playerIndex
+        self.playerIndex = playerIndex
 
     def start_episode(self, initial_hand, num_epoch=0):
         """ Initialize game with assigned initial hand. """
 
-        self._hand = initial_hand
+        self.hand = initial_hand
 
     def save_model(self):
         """ Save the model to the specified path. """
@@ -31,6 +31,7 @@ class HumanAgent:
         pass
 
     def do_step(self, already_played, board, agents_finished,
+                next_action_wins_board=lambda a, b: False,
                 always_use_best=True, print_luck=False):
         """
             Performs a step in the game based on human input.
@@ -39,17 +40,17 @@ class HumanAgent:
         """
 
         # Show prompt for action
-        print("It's your turn Player", self._playerIndex)
+        print("It's your turn Player", self.playerIndex)
         print("                   1 2 3 4 5 6 7 8 9 . . . J")
-        print("Your hand:       ", self._hand)
+        print("Your hand:       ", self.hand)
 
         # If player has already finished, pass
-        if has_finished(self._hand):
+        if has_finished(self.hand):
             return True, already_played, board
 
         # Possible actions; Pass if no possible play
         possible_hands, possible_boards = \
-            possible_next_moves(self._hand, board)
+            possible_next_moves(self.hand, board)
         if len(possible_hands) == 1 and \
                 np.all(possible_boards[0] == board):
             return False, already_played, board
@@ -74,12 +75,12 @@ class HumanAgent:
 
             if len(cards_to_play) == 2 and cards_to_play[0] >= 1 \
                     and cards_to_play[0] <= 12 and cards_to_play[1] >= 1 \
-                    and cards_to_play[1] <= self._hand[cards_to_play[0] - 1]:
+                    and cards_to_play[1] <= self.hand[cards_to_play[0] - 1]:
                 card_array_to_play = get_cards_array(
                     cards_to_play[0] - 1, cards_to_play[1])
             elif len(cards_to_play) == 3 and cards_to_play[0] >= 1 \
                     and cards_to_play[0] <= 12 and cards_to_play[1] >= 0 \
-                    and cards_to_play[1] <= self._hand[cards_to_play[0] - 1] \
+                    and cards_to_play[1] <= self.hand[cards_to_play[0] - 1] \
                     and cards_to_play[2] in [0, 1, 2] \
                     and cards_to_play[1] + cards_to_play[2] >= 1:
                 card_array_to_play = get_cards_array(
@@ -91,10 +92,10 @@ class HumanAgent:
 
             if np.any(np.all(card_array_to_play == possible_boards, axis=1)) \
                     and not np.all(card_array_to_play == board):
-                self._hand -= card_array_to_play
+                self.hand -= card_array_to_play
                 next_board = card_array_to_play
                 next_already_played = already_played + next_board
-                return has_finished(self._hand), next_already_played, next_board
+                return has_finished(self.hand), next_already_played, next_board
             else:
                 print("Invalid move.")
                 continue
