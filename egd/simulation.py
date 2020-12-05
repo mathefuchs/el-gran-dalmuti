@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import argparse
 import tqdm
-import tracemalloc
 
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
@@ -112,24 +111,12 @@ def do_simulation(agents, agent_strings, num_epochs,
                   verbose, save_model, inference):
     """ Simulates a given number of games. """
 
-    tracemalloc.start()
-    last_snapshot = tracemalloc.take_snapshot()
-
     for epoch in tqdm.tqdm(range(num_epochs)):
-        # Debug memory leak
-        if epoch != 0 and epoch % 100 == 0:
-            current_snapshot = tracemalloc.take_snapshot()
-            stats = current_snapshot.compare_to(last_snapshot, "lineno", True)
-            print()
-            for i, stat in enumerate(stats[:20], 1):
-                print(i, str(stat))
-            print()
-            last_snapshot = current_snapshot
-
+        # Play single game
         play_single_game(agents, epoch, verbose, inference)
 
         # Validate progress each 100 games
-        if epoch != 0 and epoch % 1000000 == 0:
+        if epoch != 0 and epoch % 100 == 0:
             # Play 100 games with best decisions
             if verbose:
                 print()
