@@ -7,7 +7,7 @@ $env:PYTHONPATH="."
 
 # Deep Q-Agent
 # python ./egd/simulation.py --player0 DeepQAgent --player1 Simple --player2 Random --player3 Simple --games 100000 --verbose 0 --loadmodel 0 --savemodel 1 --inference 0
-python ./egd/simulation.py --player0 DeepQAgent --player1 Random --player2 Random --player3 Random --games 100000 --verbose 0 --loadmodel 1 --savemodel 1 --inference 0
+python ./egd/simulation.py --player0 DeepQAgent --player1 Random --player2 Random --player3 Random --games 100000 --verbose 0 --loadmodel 1 --savemodel 1 --inference 0 | Tee-Object -file train_log.txt
 
 # Profiling
 # python -m memory_profiler ./egd/simulation.py --player0 DeepQAgent --player1 Simple --player2 Random --player3 Simple --games 50 --verbose 0 --loadmodel 0 --savemodel 1 --inference 0
