@@ -24,10 +24,10 @@ class DeepQAgent:
         self.gamma = 0.95  # favour future rewards
         self.exploration_decay_rate = 1 / 2000
         self.rewards = {
-            0: 10.0,  # No other agent finished before
+            0: 100.0,  # No other agent finished before
             1: 5.0,  # One other agent finished before
             2: 4.0,  # Two other agents finished before
-            3: -10.0,  # Three other agents finished before
+            3: -100.0,  # Three other agents finished before
         }
 
         self.playerIndex = playerIndex
@@ -205,11 +205,14 @@ class DeepQAgent:
 
             # Determine reward
             if has_finished(next_hand):
+                # Reward based on how many other agents are already finished
                 reward_earned = self.rewards[agents_finished]
             elif next_action_wins_board(next_already_played, next_board):
+                # Cards that win a round safely gain fixed rewards
                 reward_earned = 1.5
             else:
-                reward_earned = 0.0
+                # Else, the more cards played the better
+                reward_earned = 0.1 * np.linalg.norm(action_taken, 1)
 
             # Determine new q-value
             old_qvalue = possible_qvalues[action_index] \
