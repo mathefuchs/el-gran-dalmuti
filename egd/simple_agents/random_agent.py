@@ -40,13 +40,13 @@ class RandomAgent:
 
         # If player has already finished, pass
         if has_finished(self.hand):
-            return True, already_played, board
+            return True, already_played, board, False
 
         # Possible actions; Pass if no possible play
         possible_actions = possible_next_moves(self.hand, board)
         if len(possible_actions) == 1 and \
                 np.all(possible_actions[0] == 0):
-            return False, already_played, board
+            return False, already_played, board, False
 
         # Decide randomly
         action_index = np.random.randint(len(possible_actions))
@@ -59,4 +59,5 @@ class RandomAgent:
 
         # Return next state
         self.hand = next_hand
-        return has_finished(self.hand), next_already_played, next_board
+        return (has_finished(self.hand), next_already_played,
+                next_board, True)

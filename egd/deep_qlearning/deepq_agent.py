@@ -138,20 +138,22 @@ class DeepQAgent:
         """
             Performs a step in the game.
 
-            Returns (Player finished, Already played cards, New board)
+            Returns (Player finished, Already played cards,
+                New board, Best decision made randomly)
         """
 
         # If player has already finished, pass
         if has_finished(self.hand):
-            return True, already_played, board
+            return True, already_played, board, False
 
         # Possible actions; Pass if no possible play
         possible_actions = possible_next_moves(self.hand, board)
         if len(possible_actions) == 1 and \
                 np.all(possible_actions[0] == 0):
-            return False, already_played, board
+            return False, already_played, board, False
 
         # Do random decisions with a fixed probability
+        best_decision_made_randomly = False
         if not always_use_best and np.random.uniform() < self.epsilon:
             # Chose action randomly
             random_choice = True
@@ -173,7 +175,8 @@ class DeepQAgent:
                                       np.nanmax(possible_qvalues))
 
             # Debug "luck"
-            if print_luck and np.count_nonzero(close_to_max) > 1:
+            best_decision_made_randomly = np.count_nonzero(close_to_max) > 1
+            if print_luck and best_decision_made_randomly:
                 print("Player", self.playerIndex,
                       "- Warning: Decision made randomly")
 
@@ -219,4 +222,5 @@ class DeepQAgent:
 
         # Return next state
         self.hand = next_hand
-        return has_finished(self.hand), next_already_played, next_board
+        return (has_finished(self.hand), next_already_played,
+                next_board, best_decision_made_randomly)

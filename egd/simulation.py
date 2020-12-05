@@ -31,6 +31,8 @@ def play_single_game(agents, epoch, verbose, inference):
 
     # Game loop
     finished_players = []
+    number_decisions = np.zeros(NUM_PLAYERS, dtype=np.int16)
+    best_decisions_randomly = np.zeros(NUM_PLAYERS, dtype=np.int16)
     while len(finished_players) < NUM_PLAYERS:
         # Current player
         current_player = order_of_play[current_player_index]
@@ -51,11 +53,16 @@ def play_single_game(agents, epoch, verbose, inference):
                 return False
 
         # Perform a move
-        finished, new_already_played, new_board = \
+        finished, new_already_played, new_board, best_dec_rand = \
             agents[current_player].do_step(
                 already_played, board, len(finished_players),
                 next_action_wins_board=next_action_wins_board,
                 always_use_best=inference, print_luck=verbose)
+
+        # Amount of random decisions for evaluation
+        number_decisions[current_player] += 1
+        best_decisions_randomly[current_player] += 1 \
+            if best_dec_rand else 0
 
         # Keep track of finished agents
         if finished and current_player not in finished_players:
@@ -97,7 +104,7 @@ def play_single_game(agents, epoch, verbose, inference):
         print("Game finished - Player's Ranks", finished_players)
 
     # Return ranking of game
-    return finished_players
+    return finished_players, best_decisions_randomly / number_decisions
 
 
 def do_simulation(agents, agent_strings, num_epochs,
@@ -113,9 +120,12 @@ def do_simulation(agents, agent_strings, num_epochs,
             print()
             print("Validation - Epoch ", epoch, ":", sep="")
             rankings = []
+            rand_amounts = []
             for _ in tqdm.tqdm(range(100)):
-                rankings.append(play_single_game(agents, 0, False, True))
-            print_validation_results(rankings, agent_strings)
+                ranking, rand_amount = play_single_game(agents, 0, False, True)
+                rankings.append(ranking)
+                rand_amounts.append(rand_amount)
+            print_validation_results(rankings, rand_amounts, agent_strings)
 
             # Save every 100 epochs
             if save_model:
@@ -129,15 +139,19 @@ def do_simulation(agents, agent_strings, num_epochs,
         print()
 
 
-def print_validation_results(rankings, agent_strings):
+def print_validation_results(rankings, rand_amounts, agent_strings):
     """ Prints validation results for the given agents. """
 
     mean_ranks = [
         np.mean(np.where(np.array(rankings) == player_index)[1])
         for player_index in range(NUM_PLAYERS)
     ]
+    mean_rand_dec = np.mean(np.vstack(rand_amounts), axis=0)
     rank_and_name = list(zip(agent_strings, mean_ranks))
+    mean_rand_name = list(zip(agent_strings, mean_rand_dec))
+    print()
     print("Player's mean ranks", rank_and_name)
+    print("Player's amount of random decisions", mean_rand_name)
 
 
 if __name__ == '__main__':

@@ -53,18 +53,19 @@ class QLearningAgent:
         """
             Performs a step in the game.
 
-            Returns (Player finished, Already played cards, New board)
+            Returns (Player finished, Already played cards,
+                New board, Best decision made randomly)
         """
 
         # If player has already finished, pass
         if has_finished(self.hand):
-            return True, already_played, board
+            return True, already_played, board, False
 
         # Possible actions; Pass if no possible play
         possible_actions = possible_next_moves(self.hand, board)
         if len(possible_actions) == 1 and \
                 np.all(possible_actions[0] == 0):
-            return False, already_played, board
+            return False, already_played, board, False
 
         # Retrieve Q-Table for current state and add new if necessary
         learned_values = self.qtable.get_qtable_entry(
@@ -136,4 +137,4 @@ class QLearningAgent:
 
         # Return next state
         self.hand = next_hand
-        return has_finished(self.hand), next_already_played, next_board
+        return has_finished(self.hand), next_already_played, next_board, False
