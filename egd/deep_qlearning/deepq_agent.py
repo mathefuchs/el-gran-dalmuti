@@ -90,13 +90,15 @@ class DeepQAgent:
     def save_model(self):
         """ Save the model to the specified path. """
 
-        print("Save Trained Deep Q Model.")
+        if self.debug:
+            print("Save Trained Deep Q Model.")
         self.network.save("./egd/saved_agents/deepq.h5")
 
     def load_model(self):
         """ Load model from file. """
 
-        print("Load Deep Q Model from file.")
+        if self.debug:
+            print("Load Deep Q Model from file.")
         self.network = models.load_model("./egd/saved_agents/deepq.h5")
 
     def convert_to_data_batch(self, already_played, board, hand, actions):

@@ -117,15 +117,17 @@ def do_simulation(agents, agent_strings, num_epochs,
         # Validate progress each 100 games
         if epoch != 0 and epoch % 100 == 0:
             # Play 100 games with best decisions
-            print()
-            print("Validation - Epoch ", epoch, ":", sep="")
+            if verbose:
+                print()
+                print("Validation - Epoch ", epoch, ":", sep="")
             rankings = []
             rand_amounts = []
             for _ in tqdm.tqdm(range(100)):
                 ranking, rand_amount = play_single_game(agents, 0, False, True)
                 rankings.append(ranking)
                 rand_amounts.append(rand_amount)
-            print_validation_results(rankings, rand_amounts, agent_strings)
+            print_validation_results(epoch, rankings, rand_amounts,
+                                     agent_strings, verbose)
 
             # Save every 100 epochs
             if save_model:
@@ -136,10 +138,10 @@ def do_simulation(agents, agent_strings, num_epochs,
     if save_model:
         for agent in agents:
             agent.save_model()
-        print()
 
 
-def print_validation_results(rankings, rand_amounts, agent_strings):
+def print_validation_results(epoch, rankings, rand_amounts,
+                             agent_strings, verbose):
     """ Prints validation results for the given agents. """
 
     mean_ranks = [
@@ -149,9 +151,15 @@ def print_validation_results(rankings, rand_amounts, agent_strings):
     mean_rand_dec = np.mean(np.vstack(rand_amounts), axis=0)
     rank_and_name = list(zip(agent_strings, mean_ranks))
     mean_rand_name = list(zip(agent_strings, mean_rand_dec))
-    print()
-    print("Player's mean ranks", rank_and_name)
-    print("Player's amount of random decisions", mean_rand_name)
+
+    if verbose:
+        print()
+        print("Player's mean ranks", rank_and_name)
+        print("Player's amount of random decisions", mean_rand_name)
+    else:
+        print(epoch)
+        print(rank_and_name)
+        print(mean_rand_name)
 
 
 if __name__ == '__main__':
