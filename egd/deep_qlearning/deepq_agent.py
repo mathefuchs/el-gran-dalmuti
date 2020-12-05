@@ -1,7 +1,8 @@
 import os
 
-# Use GPU for model training
-os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"  # nopep8
+# Use GPU for model training makes training
+# slower due to small batch size of 1
+# os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"  # nopep8
 
 import numpy as np
 import pandas as pd
