@@ -21,7 +21,7 @@ class DeepQAgent:
 
         self.alpha = 0.5  # learning rate
         self.gamma = 0.95  # favour future rewards
-        self.exploration_decay_rate = 1 / 20000
+        self.exploration_decay_rate = 1 / 2000
         self.rewards = {
             0: 10.0,  # No other agent finished before
             1: 5.0,  # One other agent finished before
