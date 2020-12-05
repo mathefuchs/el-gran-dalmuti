@@ -4,104 +4,140 @@ import argparse
 import tqdm
 
 from egd.game.cards import NUM_CARD_VALUES
-from egd.game.state import NUM_PLAYERS, random_initial_cards
+from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
 from egd.game.moves import possible_next_moves, only_passing_possible
 from egd.util import get_agent
 
 
-def do_simulation(agents, num_epochs, verbose, save_model, inference):
+def play_single_game(agents, epoch, verbose, inference):
+    """ Play a single round of the game. """
+
+    # Generate and assign initial cards
+    initial_cards = random_initial_cards()
+    for playerIndex, agent in enumerate(agents):
+        agent.start_episode(initial_cards[playerIndex], epoch)
+
+    # Random first player and order of play
+    order_of_play = np.random.permutation(PLAYER)
+    current_player_index = np.random.randint(NUM_PLAYERS)
+    already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
+    board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
+    turns_passed_without_move = 0
+
+    # Print intial board
+    if verbose:
+        print("                    1 2 3 4 5 6 7 8 9 . . . J")
+        print("Initial board:   ", board)
+
+    # Game loop
+    finished_players = []
+    while len(finished_players) < NUM_PLAYERS:
+        # Current player
+        current_player = order_of_play[current_player_index]
+        next_players = [order_of_play[
+            (current_player_index + i) %
+            NUM_PLAYERS] for i in range(1, NUM_PLAYERS)]
+
+        # Check whether action wins board
+        def next_action_wins_board(next_already_played, next_board):
+            next_player_index = 0
+            while next_player_index < NUM_PLAYERS - 1 and only_passing_possible(
+                    agents[next_players[next_player_index]].hand, next_board):
+                next_player_index += 1
+
+            if next_player_index == NUM_PLAYERS - 1:
+                return True
+            else:
+                return False
+
+        # Perform a move
+        finished, new_already_played, new_board = \
+            agents[current_player].do_step(
+                already_played, board, len(finished_players),
+                next_action_wins_board=next_action_wins_board,
+                always_use_best=inference, print_luck=verbose)
+
+        # Keep track of finished agents
+        if finished and current_player not in finished_players:
+            finished_players.append(current_player)
+
+        # Print move
+        if verbose:
+            if finished:
+                print("Player", current_player,
+                      "- Board:", new_board, "- Finished")
+            elif np.all(new_already_played == already_played):
+                print("Player", current_player,
+                      "- Board:", new_board, "- Passed")
+            else:
+                print("Player", current_player,
+                      "- Board:", new_board)
+
+        # Reset board after a complete round of no moves
+        if np.all(new_already_played == already_played):
+            turns_passed_without_move += 1
+
+            if turns_passed_without_move == NUM_PLAYERS - 1:
+                turns_passed_without_move = 0
+                new_board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
+
+                if verbose:
+                    print("                   1 2 3 4 5 6 7 8 9 . . . J")
+                    print("New board:       ", new_board)
+        else:
+            turns_passed_without_move = 0
+
+        # Next turn
+        current_player_index = (current_player_index + 1) % NUM_PLAYERS
+        already_played = new_already_played
+        board = new_board
+
+    # Game finished
+    if verbose:
+        print("Game finished - Player's Ranks", finished_players)
+
+    # Return ranking of game
+    return finished_players
+
+
+def do_simulation(agents, agent_strings, num_epochs,
+                  verbose, save_model, inference):
     """ Simulates a given number of games. """
 
     for epoch in tqdm.tqdm(range(num_epochs)):
-        # Generate and assign initial cards
-        initial_cards = random_initial_cards()
-        for playerIndex, agent in enumerate(agents):
-            agent.start_episode(initial_cards[playerIndex], epoch)
+        play_single_game(agents, epoch, verbose, inference)
 
-        # Random first player
-        current_player_index = np.random.randint(NUM_PLAYERS)
-        already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-        board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-        turns_passed_without_move = 0
+        # Validate progress each 100 games
+        if epoch != 0 and epoch % 100 == 0:
+            # Play 100 games with best decisions
+            print()
+            print("Validation - Epoch ", epoch, ":", sep="")
+            rankings = []
+            for _ in tqdm.tqdm(range(100)):
+                rankings.append(play_single_game(agents, 0, False, True))
+            print_validation_results(rankings, agent_strings)
 
-        # Print intial board
-        if verbose:
-            print("                    1 2 3 4 5 6 7 8 9 . . . J")
-            print("Initial board:   ", board)
-
-        # Game loop
-        finished_players = []
-        while len(finished_players) < NUM_PLAYERS:
-            # Check whether action wins board
-            def next_action_wins_board(next_already_played, next_board):
-                next_players = [(current_player_index + i) %
-                                NUM_PLAYERS for i in range(1, NUM_PLAYERS)]
-                next_player_index = 0
-
-                while next_player_index < NUM_PLAYERS - 1 and only_passing_possible(
-                        agents[next_players[next_player_index]].hand, next_board):
-                    next_player_index += 1
-
-                if next_player_index == NUM_PLAYERS - 1:
-                    return True
-                else:
-                    return False
-
-            # Perform a move
-            finished, new_already_played, new_board = \
-                agents[current_player_index].do_step(
-                    already_played, board, len(finished_players),
-                    next_action_wins_board=next_action_wins_board,
-                    always_use_best=inference, print_luck=verbose)
-
-            # Keep track of finished agents
-            if finished and current_player_index not in finished_players:
-                finished_players.append(current_player_index)
-
-            # Print move
-            if verbose:
-                if finished:
-                    print("Player", current_player_index,
-                          "- Board:", new_board, "- Finished")
-                elif np.all(new_already_played == already_played):
-                    print("Player", current_player_index,
-                          "- Board:", new_board, "- Passed")
-                else:
-                    print("Player", current_player_index,
-                          "- Board:", new_board)
-
-            # Reset board after a complete round of no moves
-            if np.all(new_already_played == already_played):
-                turns_passed_without_move += 1
-
-                if turns_passed_without_move == NUM_PLAYERS - 1:
-                    turns_passed_without_move = 0
-                    new_board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-
-                    if verbose:
-                        print("                   1 2 3 4 5 6 7 8 9 . . . J")
-                        print("New board:       ", new_board)
-            else:
-                turns_passed_without_move = 0
-
-            # Next turn
-            current_player_index = (current_player_index + 1) % NUM_PLAYERS
-            already_played = new_already_played
-            board = new_board
-
-        # Game finished
-        if verbose:
-            print("Game finished - Player's Ranks", finished_players)
-
-        # Save every 100 epochs
-        if save_model and epoch % 100 == 0:
-            for agent in agents:
-                agent.save_model()
+            # Save every 100 epochs
+            if save_model:
+                for agent in agents:
+                    agent.save_model()
 
     # Save trained agents
     if save_model:
         for agent in agents:
             agent.save_model()
+        print()
+
+
+def print_validation_results(rankings, agent_strings):
+    """ Prints validation results for the given agents. """
+
+    mean_ranks = [
+        np.mean(np.where(np.array(rankings) == player_index)[1])
+        for player_index in range(NUM_PLAYERS)
+    ]
+    rank_and_name = list(zip(agent_strings, mean_ranks))
+    print("Player's mean ranks", rank_and_name)
 
 
 if __name__ == '__main__':
@@ -147,5 +183,6 @@ if __name__ == '__main__':
             (args.loadmodel == 1)))
 
     # Start simulation
-    do_simulation(agents, args.games, (args.verbose == 1),
-                  (args.savemodel == 1), (args.inference == 1))
+    do_simulation(
+        agents, agent_strings, args.games, (args.verbose == 1),
+        (args.savemodel == 1), (args.inference == 1))
