@@ -1,14 +1,7 @@
-import os
-
-# Use GPU for model training makes training
-# slower due to small batch size of 1
-# os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"  # nopep8
-
 import numpy as np
-import pandas as pd
-
-from keras import models
-from keras import layers
+import tensorflow as tf
+from tf_agents.replay_buffers import py_uniform_replay_buffer
+from tf_agents.specs import tensor_spec
 
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import has_finished, NUM_PLAYERS
@@ -20,16 +13,34 @@ class DeepQAgent:
     def __init__(self, playerIndex, create_model=True):
         """ Initialize an agent. """
 
-        self.alpha = 0.5  # learning rate
+        # Hyperparameters
+        self.alpha = 0.75  # learning rate
         self.gamma = 0.95  # favour future rewards
         self.exploration_decay_rate = 1 / 2000
+        self.reward_win_round = 0.005
+        self.reward_per_card_played = 0.001
         self.rewards = {
-            0: 100.0,  # No other agent finished before
-            1: 5.0,  # One other agent finished before
-            2: 4.0,  # Two other agents finished before
-            3: -100.0,  # Three other agents finished before
+            0: 1.0,  # No other agent finished before
+            1: 0.05,  # One other agent finished before
+            2: 0.04,  # Two other agents finished before
+            3: -1.0,  # Three other agents finished before
         }
 
+        # Training/Batch parameters
+        self.sample_batch = 4096
+        self.replay_capacity = 8192
+        self.train_each_n_steps = 4096
+        self.step_iteration = 0
+        self.model_data_spec = (
+            tf.TensorSpec([4, 13, 1], tf.int8, "board_state"),
+            tf.TensorSpec([1], tf.float32, "q_value"),
+        )
+        self.replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
+            capacity=self.replay_capacity,
+            data_spec=tensor_spec.to_nest_array_spec(self.model_data_spec)
+        )
+
+        # Other parameters
         self.playerIndex = playerIndex
         self.debug = False
 
@@ -41,11 +52,11 @@ class DeepQAgent:
         """ Create model for predicting q-values. """
 
         # Create sequential model
-        self.network = models.Sequential()
+        self.network = tf.keras.Sequential()
 
         # Use to convolutional layers to group same cards
         # of a kind among the different input vectors
-        self.network.add(layers.convolutional.Conv2D(
+        self.network.add(tf.keras.layers.Conv2D(
             # Input rows: Already played, board, hand, action
             input_shape=(4, 13, 1),
             # Window size
@@ -53,30 +64,35 @@ class DeepQAgent:
             # Output filters
             filters=11,
             # Activation
-            activation='relu'
+            activation=tf.keras.activations.relu
         ))
-        self.network.add(layers.convolutional.Conv2D(
+        self.network.add(tf.keras.layers.Conv2D(
             # Window size
             kernel_size=(2, 2),
             # Output filters
             filters=13,
             # Activation
-            activation='relu'
+            activation=tf.keras.activations.relu
         ))
 
         # Flatten convolutional layers
-        self.network.add(layers.Flatten())
-        self.network.add(layers.Dense(13, activation="relu"))
-
-        # Dropout to remove noise
-        self.network.add(layers.Dropout(0.5))
+        self.network.add(tf.keras.layers.Flatten())
+        self.network.add(tf.keras.layers.Dense(
+            13,
+            activation=tf.keras.activations.relu
+        ))
 
         # Final dense layer for q-value
-        self.network.add(layers.Dense(1))
+        self.network.add(tf.keras.layers.Dense(1))
 
         # Compile neural network, use mean-squared error
         self.network.compile(
-            loss='mse', optimizer='RMSprop', metrics=['mse']
+            loss=tf.keras.losses.Huber(),
+            optimizer=tf.keras.optimizers.RMSprop(),
+            metrics=[
+                tf.keras.losses.MeanSquaredError(),
+                tf.keras.losses.Huber()
+            ]
         )
 
     def start_episode(self, initial_hand, num_episode=0):
@@ -100,10 +116,12 @@ class DeepQAgent:
 
         if self.debug:
             print("Load Deep Q Model from file.")
-        self.network = models.load_model("./egd/saved_agents/deepq.h5")
+        self.network = tf.keras.models.load_model(
+            "./egd/saved_agents/deepq.h5")
 
     def convert_to_data_batch(self, already_played, board, hand, actions):
-        """ Converts the given arrays to a representation understood by the model. """
+        """ Converts the given arrays to a representation 
+            understood by the model. """
 
         enc_already_played = np.resize(already_played, (13, 1))
         enc_board = np.resize(board, (13, 1))
@@ -118,17 +136,18 @@ class DeepQAgent:
 
         return np.stack(stack_list, axis=0)
 
-    def fit_value_to_network(self, already_played, board, hand, action,
-                             updated_q_value, weight=1):
-        """ Fits a measured q-value to the neural net. """
+    def fit_values_to_network(self):
+        """ Fits data from the replay buffer to the neural net. """
+
+        dataset = self.replay_buffer.as_dataset(
+            sample_batch_size=self.sample_batch)
 
         self.network.fit(
-            self.convert_to_data_batch(already_played, board, hand, [action]),
-            np.array([[updated_q_value]]),
-            epochs=weight, verbose=(1 if self.debug else 0)
+            dataset, verbose=(1 if self.debug else 0)
         )
 
-    def predict_q_values_from_network(self, already_played, board, hand, actions):
+    def predict_q_values_from_network(
+            self, already_played, board, hand, actions):
         """ Predicts q-values from the trained neural net. """
 
         return self.network.predict(
@@ -209,10 +228,11 @@ class DeepQAgent:
                 reward_earned = self.rewards[agents_finished]
             elif next_action_wins_board(next_already_played, next_board):
                 # Cards that win a round safely gain fixed rewards
-                reward_earned = 1.5
+                reward_earned = self.reward_win_round
             else:
                 # Else, the more cards played the better
-                reward_earned = 0.1 * np.linalg.norm(action_taken, 1)
+                reward_earned = self.reward_per_card_played * \
+                    np.linalg.norm(action_taken, 1)
 
             # Determine new q-value
             old_qvalue = possible_qvalues[action_index] \
@@ -220,13 +240,19 @@ class DeepQAgent:
             new_qvalue = (1 - self.alpha) * old_qvalue + \
                 self.alpha * (reward_earned + self.gamma * next_max)
 
-            # Fit neural net to newly observed reward estimate
-            self.fit_value_to_network(
-                already_played, board, self.hand,
-                action_taken, new_qvalue, weight=1
-            )
+            # Record step in replay buffer
+            self.replay_buffer.add_batch((
+                self.convert_to_data_batch(
+                    already_played, board, self.hand, [action_taken]
+                ), new_qvalue))
+
+            # Fit neural net to observed replays
+            if self.step_iteration != 0 and self.step_iteration % \
+                    self.train_each_n_steps == 0:
+                self.fit_values_to_network()
 
         # Return next state
+        self.step_iteration += 1
         self.hand = next_hand
         return (has_finished(self.hand), next_already_played,
                 next_board, best_decision_made_randomly)
