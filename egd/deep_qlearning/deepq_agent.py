@@ -250,9 +250,9 @@ class DeepQAgent:
             if self.step_iteration != 0 and self.step_iteration % \
                     self.train_each_n_steps == 0:
                 self.fit_values_to_network()
+            self.step_iteration += 1
 
         # Return next state
-        self.step_iteration += 1
         self.hand = next_hand
         return (has_finished(self.hand), next_already_played,
                 next_board, best_decision_made_randomly)
