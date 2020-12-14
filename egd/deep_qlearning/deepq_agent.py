@@ -97,8 +97,8 @@ class DeepQAgent:
             loss=tf.keras.losses.Huber(),
             optimizer=tf.keras.optimizers.RMSprop(),
             metrics=[
+                tf.keras.losses.Huber(),
                 tf.keras.losses.MeanSquaredError(),
-                tf.keras.losses.Huber()
             ]
         )
 
@@ -151,7 +151,7 @@ class DeepQAgent:
         dataset = self.validation_buffer.as_dataset(
             sample_batch_size=self.val_replay_capacity)
 
-        self.network.evaluate(
+        return self.network.evaluate(
             dataset, steps=1, verbose=1
         )
 

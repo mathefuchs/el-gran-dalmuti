@@ -111,35 +111,59 @@ def do_simulation(agents, agent_strings, num_epochs,
                   verbose, save_model, inference):
     """ Simulates a given number of games. """
 
+    # Stats containing epoch, agent index, agent name, mean rank,
+    # mean amount of random decisions, quality of q-value approximation
+    simulation_stats = []
+
     for epoch in tqdm.tqdm(range(num_epochs)):
         # Play single game
         play_single_game(agents, epoch, verbose, inference)
 
         # Validate progress each 1000 games
-        if epoch != 0 and epoch % 10 == 0:
-            # Play 100 games with best decisions
+        if epoch != 0 and epoch % 10 == 0:  # 1000
+            # Play 1000 games with best decisions
             if verbose:
                 print()
                 print("Validation - Epoch ", epoch, ":", sep="")
 
+            # Log general stats
+            agent_stats = []
+            for i, agent in enumerate(agents):
+                agent_stats.append([epoch, i, agent_strings[i]])
+
             # Evaluate rankings
             rankings = []
             rand_amounts = []
-            for _ in tqdm.tqdm(range(2)):
-                ranking, rand_amount = play_single_game(agents, 0, False, True)
+            for _ in tqdm.tqdm(range(2)):  # 100
+                ranking, rand_amount = play_single_game(
+                    agents, 0, False, True)
                 rankings.append(ranking)
                 rand_amounts.append(rand_amount)
-            print_validation_results(epoch, rankings, rand_amounts,
-                                     agent_strings, verbose)
+            print_validation_results(
+                epoch, rankings, rand_amounts,
+                agent_strings, agent_stats, verbose)
 
             # Evaluate agent's q-value representation
-            for agent in agents:
-                agent.evaluate_inference_mode()
+            for i, agent in enumerate(agents):
+                metrics = agent.evaluate_inference_mode()
+                agent_stats[i].extend(metrics[1:] if metrics else [0.0, 0.0])
+
+            # Append test stats
+            simulation_stats.extend(agent_stats)
 
             # Save every 1000 epochs
             if save_model:
                 for agent in agents:
                     agent.save_model()
+
+    # Save training stats
+    stats_df = pd.DataFrame(
+        simulation_stats, columns=[
+            "epoch", "agent", "agent_name",
+            "mean_rank", "mean_rand_decisions",
+            "huber_loss_q_val_approx", "mse_loss_q_val_approx"
+        ])
+    stats_df.to_csv("./egd/saved_agents/training_deepq_stats.csv")
 
     # Save trained agents
     if save_model:
@@ -147,15 +171,23 @@ def do_simulation(agents, agent_strings, num_epochs,
             agent.save_model()
 
 
-def print_validation_results(epoch, rankings, rand_amounts,
-                             agent_strings, verbose):
+def print_validation_results(
+        epoch, rankings, rand_amounts,
+        agent_strings, agent_stats, verbose):
     """ Prints validation results for the given agents. """
 
+    # Compute mean ranks and amount of random decisions
     mean_ranks = [
         np.mean(np.where(np.array(rankings) == player_index)[1])
         for player_index in range(NUM_PLAYERS)
     ]
     mean_rand_dec = np.mean(np.vstack(rand_amounts), axis=0)
+
+    # Populate stats
+    for i, entry in enumerate(agent_stats):
+        entry.extend([mean_ranks[i], mean_rand_dec[i]])
+
+    # Zip names and metrics for readibility
     rank_and_name = list(zip(agent_strings, mean_ranks))
     mean_rand_name = list(zip(agent_strings, mean_rand_dec))
 
