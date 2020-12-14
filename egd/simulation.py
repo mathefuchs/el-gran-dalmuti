@@ -156,19 +156,19 @@ def do_simulation(agents, agent_strings, num_epochs,
                 for agent in agents:
                     agent.save_model()
 
-    # Save training stats
-    stats_df = pd.DataFrame(
-        simulation_stats, columns=[
-            "epoch", "agent", "agent_name",
-            "mean_rank", "mean_rand_decisions",
-            "huber_loss_q_val_approx", "mse_loss_q_val_approx"
-        ])
-    stats_df.to_csv(
-        "./egd/saved_agents/training_deepq_stats.csv",
-        index=False)
-
-    # Save trained agents
     if save_model:
+        # Save training stats
+        stats_df = pd.DataFrame(
+            simulation_stats, columns=[
+                "epoch", "agent", "agent_name",
+                "mean_rank", "mean_rand_decisions",
+                "huber_loss_q_val_approx", "mse_loss_q_val_approx"
+            ])
+        stats_df.to_csv(
+            "./egd/saved_agents/training_deepq_stats.csv",
+            index=False)
+
+        # Save trained agents
         for agent in agents:
             agent.save_model()
 
