@@ -30,6 +30,11 @@ class HumanAgent:
         # NOP
         pass
 
+    def evaluate_inference_mode(self):
+        """ No special evaluation needed. """
+
+        pass
+
     def do_step(self, already_played, board, agents_finished,
                 next_action_wins_board=lambda a, b: False,
                 always_use_best=True, print_luck=False):

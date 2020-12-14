@@ -27,9 +27,9 @@ class DeepQAgent:
         }
 
         # Training/Batch parameters
-        self.sample_batch = 4096
-        self.replay_capacity = 8192
-        self.train_each_n_steps = 4096
+        self.sample_batch = 64  # 4096
+        self.replay_capacity = 128  # 8192
+        self.train_each_n_steps = 64  # 4096
         self.step_iteration = 0
         self.model_data_spec = (
             tf.TensorSpec([4, 13, 1], tf.int8, "board_state"),
@@ -37,6 +37,13 @@ class DeepQAgent:
         )
         self.replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
             capacity=self.replay_capacity,
+            data_spec=tensor_spec.to_nest_array_spec(self.model_data_spec)
+        )
+
+        # Validation parameters
+        self.val_replay_capacity = 20  # 16384
+        self.validation_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
+            capacity=self.val_replay_capacity,
             data_spec=tensor_spec.to_nest_array_spec(self.model_data_spec)
         )
 
@@ -136,6 +143,19 @@ class DeepQAgent:
 
         return np.stack(stack_list, axis=0)
 
+    @tf.autograph.experimental.do_not_convert
+    def evaluate_inference_mode(self):
+        """ Evaluates q-value representation of 
+            neural network in validation games. """
+
+        dataset = self.validation_buffer.as_dataset(
+            sample_batch_size=self.val_replay_capacity)
+
+        self.network.evaluate(
+            dataset, steps=1, verbose=1
+        )
+
+    @tf.autograph.experimental.do_not_convert
     def fit_values_to_network(self):
         """ Fits data from the replay buffer to the neural net. """
 
@@ -143,7 +163,7 @@ class DeepQAgent:
             sample_batch_size=self.sample_batch)
 
         self.network.fit(
-            dataset, verbose=(1 if self.debug else 0)
+            dataset, steps_per_epoch=1, epochs=1, verbose=1
         )
 
     def predict_q_values_from_network(
@@ -212,34 +232,34 @@ class DeepQAgent:
         next_board = board if np.all(action_taken == 0) else action_taken
         next_already_played = already_played + action_taken
 
+        # Retrieve next state's max q-value
+        next_possible_actions = \
+            possible_next_moves(next_hand, next_board)
+        next_qvalues = self.predict_q_values_from_network(
+            next_already_played, next_board, next_hand,
+            next_possible_actions)
+        next_max = np.nanmax(next_qvalues)
+
+        # Determine reward
+        if has_finished(next_hand):
+            # Reward based on how many other agents are already finished
+            reward_earned = self.rewards[agents_finished]
+        elif next_action_wins_board(next_already_played, next_board):
+            # Cards that win a round safely gain fixed rewards
+            reward_earned = self.reward_win_round
+        else:
+            # Else, the more cards played the better
+            reward_earned = self.reward_per_card_played * \
+                np.linalg.norm(action_taken, 1)
+
+        # Determine new q-value
+        old_qvalue = possible_qvalues[action_index] \
+            if not random_choice else possible_qvalues
+        new_qvalue = (1 - self.alpha) * old_qvalue + \
+            self.alpha * (reward_earned + self.gamma * next_max)
+
         # Do not train in inference mode
         if not always_use_best:
-            # Retrieve next state's max q-value
-            next_possible_actions = \
-                possible_next_moves(next_hand, next_board)
-            next_qvalues = self.predict_q_values_from_network(
-                next_already_played, next_board, next_hand,
-                next_possible_actions)
-            next_max = np.nanmax(next_qvalues)
-
-            # Determine reward
-            if has_finished(next_hand):
-                # Reward based on how many other agents are already finished
-                reward_earned = self.rewards[agents_finished]
-            elif next_action_wins_board(next_already_played, next_board):
-                # Cards that win a round safely gain fixed rewards
-                reward_earned = self.reward_win_round
-            else:
-                # Else, the more cards played the better
-                reward_earned = self.reward_per_card_played * \
-                    np.linalg.norm(action_taken, 1)
-
-            # Determine new q-value
-            old_qvalue = possible_qvalues[action_index] \
-                if not random_choice else possible_qvalues
-            new_qvalue = (1 - self.alpha) * old_qvalue + \
-                self.alpha * (reward_earned + self.gamma * next_max)
-
             # Record step in replay buffer
             self.replay_buffer.add_batch((
                 self.convert_to_data_batch(
@@ -251,6 +271,13 @@ class DeepQAgent:
                     self.train_each_n_steps == 0:
                 self.fit_values_to_network()
             self.step_iteration += 1
+
+        # Validate q-values in inference mode
+        else:
+            self.validation_buffer.add_batch((
+                self.convert_to_data_batch(
+                    already_played, board, self.hand, [action_taken]
+                ), new_qvalue))
 
         # Return next state
         self.hand = next_hand

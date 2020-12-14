@@ -115,22 +115,28 @@ def do_simulation(agents, agent_strings, num_epochs,
         # Play single game
         play_single_game(agents, epoch, verbose, inference)
 
-        # Validate progress each 100 games
-        if epoch != 0 and epoch % 100 == 0:
+        # Validate progress each 1000 games
+        if epoch != 0 and epoch % 10 == 0:
             # Play 100 games with best decisions
             if verbose:
                 print()
                 print("Validation - Epoch ", epoch, ":", sep="")
+
+            # Evaluate rankings
             rankings = []
             rand_amounts = []
-            for _ in tqdm.tqdm(range(100)):
+            for _ in tqdm.tqdm(range(2)):
                 ranking, rand_amount = play_single_game(agents, 0, False, True)
                 rankings.append(ranking)
                 rand_amounts.append(rand_amount)
             print_validation_results(epoch, rankings, rand_amounts,
                                      agent_strings, verbose)
 
-            # Save every 100 epochs
+            # Evaluate agent's q-value representation
+            for agent in agents:
+                agent.evaluate_inference_mode()
+
+            # Save every 1000 epochs
             if save_model:
                 for agent in agents:
                     agent.save_model()
@@ -155,9 +161,11 @@ def print_validation_results(epoch, rankings, rand_amounts,
 
     if verbose:
         print()
+        print(epoch)
         print("Player's mean ranks", rank_and_name)
         print("Player's amount of random decisions", mean_rand_name)
     else:
+        print()
         print(epoch)
         print(rank_and_name)
         print(mean_rand_name)
