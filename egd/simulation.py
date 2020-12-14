@@ -9,6 +9,11 @@ from egd.game.moves import possible_next_moves, only_passing_possible
 from egd.util import get_agent
 
 
+use_small_nums = False
+epochs_for_validation = 10 if use_small_nums else 1000
+validation_games = 2 if use_small_nums else 100
+
+
 def play_single_game(agents, epoch, verbose, inference):
     """ Play a single round of the game. """
 
@@ -119,9 +124,9 @@ def do_simulation(agents, agent_strings, num_epochs,
         # Play single game
         play_single_game(agents, epoch, verbose, inference)
 
-        # Validate progress each 1000 games
-        if epoch != 0 and epoch % 10 == 0:  # 1000
-            # Play 1000 games with best decisions
+        # Validate progress each x games
+        if epoch != 0 and epoch % epochs_for_validation == 0:
+            # Play x games with best decisions
             if verbose:
                 print()
                 print("Validation - Epoch ", epoch, ":", sep="")
@@ -134,7 +139,7 @@ def do_simulation(agents, agent_strings, num_epochs,
             # Evaluate rankings
             rankings = []
             rand_amounts = []
-            for _ in tqdm.tqdm(range(2)):  # 100
+            for _ in tqdm.tqdm(range(validation_games)):
                 ranking, rand_amount = play_single_game(
                     agents, 0, False, True)
                 rankings.append(ranking)

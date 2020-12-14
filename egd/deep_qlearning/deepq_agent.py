@@ -13,6 +13,9 @@ class DeepQAgent:
     def __init__(self, playerIndex, create_model=True):
         """ Initialize an agent. """
 
+        # Whether to use small numbers for debugging reasons
+        self.use_small_numbers = False
+
         # Hyperparameters
         self.alpha = 0.75  # learning rate
         self.gamma = 0.95  # favour future rewards
@@ -27,9 +30,9 @@ class DeepQAgent:
         }
 
         # Training/Batch parameters
-        self.sample_batch = 64  # 4096
-        self.replay_capacity = 128  # 8192
-        self.train_each_n_steps = 64  # 4096
+        self.sample_batch = 64 if self.use_small_numbers else 4096
+        self.replay_capacity = 128 if self.use_small_numbers else 8192
+        self.train_each_n_steps = 64 if self.use_small_numbers else 4096
         self.step_iteration = 0
         self.model_data_spec = (
             tf.TensorSpec([4, 13, 1], tf.int8, "board_state"),
@@ -41,7 +44,7 @@ class DeepQAgent:
         )
 
         # Validation parameters
-        self.val_replay_capacity = 20  # 16384
+        self.val_replay_capacity = 20 if self.use_small_numbers else 16384
         self.validation_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
             capacity=self.val_replay_capacity,
             data_spec=tensor_spec.to_nest_array_spec(self.model_data_spec)
