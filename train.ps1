@@ -13,3 +13,4 @@ python ./egd/simulation.py --player0 DeepQAgent --player1 Random --player2 Rando
 # Profiling
 # python -m memory_profiler ./egd/simulation.py --player0 DeepQAgent --player1 Simple --player2 Random --player3 Simple --games 50 --verbose 0 --loadmodel 0 --savemodel 1 --inference 0
 # mprof run ./egd/simulation.py --player0 DeepQAgent --player1 Simple --player2 Random --player3 Simple --games 200 --verbose 0 --loadmodel 0 --savemodel 1 --inference 0
+# python -m cProfile -s time -o "cprof.profile" ./egd/simulation.py --player0 DeepQAgent --player1 Random --player2 Random --player3 Random --games 100 --verbose 0 --loadmodel 0 --savemodel 1 --inference 0
