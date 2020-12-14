@@ -10,8 +10,8 @@ from egd.util import get_agent
 
 
 use_small_nums = False
-epochs_for_validation = 10 if use_small_nums else 1000
-validation_games = 2 if use_small_nums else 100
+epochs_for_validation = 10 if use_small_nums else 100
+validation_games = 2 if use_small_nums else 10
 
 
 def play_single_game(agents, epoch, verbose, inference):
