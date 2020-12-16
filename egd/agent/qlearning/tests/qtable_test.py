@@ -3,7 +3,7 @@ import pandas as pd
 import unittest
 
 from egd.game.cards import NUM_CARD_VALUES
-from egd.qlearning.qtable import QTable
+from egd.agent.qlearning.qtable import QTable
 
 
 class QTableTest(unittest.TestCase):
