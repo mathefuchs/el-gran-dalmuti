@@ -139,6 +139,9 @@ class DeepQAgent:
 
         stack_list = []
         for action in actions:
+            if action.shape[0] != NUM_CARD_VALUES:
+                raise Exception("Action has wrong shape.")
+
             stack_list.append([
                 enc_already_played, enc_board,
                 enc_hand, np.resize(action, (13, 1))
@@ -208,7 +211,7 @@ class DeepQAgent:
             # Get q-value estimate only for chosen action
             possible_qvalues = self.predict_q_values_from_network(
                 already_played, board, self.hand,
-                action_taken
+                [action_taken]
             )[0]
         else:
             # Get predictions for all possible actions
