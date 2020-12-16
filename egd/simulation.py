@@ -1,17 +1,12 @@
 import numpy as np
 import pandas as pd
-import argparse
 import tqdm
 
+from egd.config import epochs_for_validation, validation_games
+from egd.evaluation import print_validation_results
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
 from egd.game.moves import possible_next_moves, only_passing_possible
-from egd.util import get_agent
-
-
-use_small_nums = False
-epochs_for_validation = 10 if use_small_nums else 100
-validation_games = 2 if use_small_nums else 10
 
 
 def play_single_game(agents, epoch, verbose, inference):
@@ -176,83 +171,3 @@ def do_simulation(agents, agent_strings, num_epochs,
         # Save trained agents
         for agent in agents:
             agent.save_model()
-
-
-def print_validation_results(
-        epoch, rankings, rand_amounts,
-        agent_strings, agent_stats, verbose):
-    """ Prints validation results for the given agents. """
-
-    # Compute mean ranks and amount of random decisions
-    mean_ranks = [
-        np.mean(np.where(np.array(rankings) == player_index)[1])
-        for player_index in range(NUM_PLAYERS)
-    ]
-    mean_rand_dec = np.mean(np.vstack(rand_amounts), axis=0)
-
-    # Populate stats
-    for i, entry in enumerate(agent_stats):
-        entry.extend([mean_ranks[i], mean_rand_dec[i]])
-
-    # Zip names and metrics for readibility
-    rank_and_name = list(zip(agent_strings, mean_ranks))
-    mean_rand_name = list(zip(agent_strings, mean_rand_dec))
-
-    if verbose:
-        print()
-        print(epoch)
-        print("Player's mean ranks", rank_and_name)
-        print("Player's amount of random decisions", mean_rand_name)
-    else:
-        print()
-        print(epoch)
-        print(rank_and_name)
-        print(mean_rand_name)
-
-
-if __name__ == '__main__':
-    # Parse args
-    parser = argparse.ArgumentParser(
-        description="Selection of Agents")
-    parser.add_argument(
-        '--player0', default="Human", type=str, nargs="?",
-        metavar='Type of player 0.')
-    parser.add_argument(
-        '--player1', default="QLearningAgent", type=str, nargs="?",
-        metavar='Type of player 1.')
-    parser.add_argument(
-        '--player2', default="QLearningAgent", type=str, nargs="?",
-        metavar='Type of player 2.')
-    parser.add_argument(
-        '--player3', default="QLearningAgent", type=str, nargs="?",
-        metavar='Type of player 3.')
-    parser.add_argument(
-        '--games', default="100", type=int, nargs="?",
-        metavar='Number of games.')
-    parser.add_argument(
-        '--verbose', default=0, type=int, nargs="?",
-        metavar='Use verbose logging.')
-    parser.add_argument(
-        '--loadmodel', default=0, type=int, nargs="?",
-        metavar='Whether to load trained models.')
-    parser.add_argument(
-        '--savemodel', default=0, type=int, nargs="?",
-        metavar='Whether to save models.')
-    parser.add_argument(
-        '--inference', default=0, type=int, nargs="?",
-        metavar='Whether to use the agents in inference mode.')
-    args = parser.parse_args()
-
-    # Parse agents
-    agent_strings = [args.player0, args.player1,
-                     args.player2, args.player3]
-    agents = []
-    for player_index in range(NUM_PLAYERS):
-        agents.append(get_agent(
-            player_index, agent_strings[player_index],
-            (args.loadmodel == 1)))
-
-    # Start simulation
-    do_simulation(
-        agents, agent_strings, args.games, (args.verbose == 1),
-        (args.savemodel == 1), (args.inference == 1))

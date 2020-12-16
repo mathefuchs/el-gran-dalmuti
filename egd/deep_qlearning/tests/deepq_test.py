@@ -51,19 +51,18 @@ class DeepQAgentTest(unittest.TestCase):
         agent.start_episode(hand, 0)
 
         # Fit observation to network
-        agent.fit_value_to_network(
-            already_played, board, hand, action,
-            1.0, weight=100  # Fit 100 times to test
-        )
+        x = agent.convert_to_data_batch(already_played, board, hand, [action])
+        agent.replay_buffer.add_batch((x.copy(), 1.0))
+        agent.fit_values_to_network()
 
         # Predict for same situation
         pred_q_value = agent.predict_q_values_from_network(
             already_played, board, hand, [action]
         )[0]
 
-        # Prediction should eventually be close to 1
+        # Prediction should be between -1 and 1
         self.assertLess(pred_q_value, 1.0)
-        self.assertGreater(pred_q_value, 0.5)
+        self.assertGreater(pred_q_value, -1.0)
 
 
 if __name__ == '__main__':

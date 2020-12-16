@@ -3,6 +3,7 @@ import tensorflow as tf
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 
+from egd.config import use_small_nums
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
@@ -14,7 +15,7 @@ class DeepQAgent:
         """ Initialize an agent. """
 
         # Whether to use small numbers for debugging reasons
-        self.use_small_numbers = False
+        self.use_small_numbers = use_small_nums
 
         # Hyperparameters
         self.alpha = 0.75  # learning rate
