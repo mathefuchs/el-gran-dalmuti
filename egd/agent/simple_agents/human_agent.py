@@ -1,63 +1,27 @@
 import numpy as np
 import pandas as pd
 
+from egd.agent.base_agent import StepState, ModelBase
 from egd.game.cards import get_cards_array, JOKER
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
 
 
-class HumanAgent:
+class HumanAgent(ModelBase):
 
-    def __init__(self, playerIndex):
-        """ Initialize an agent. """
-
-        self.playerIndex = playerIndex
-
-    def start_episode(self, initial_hand, num_epoch=0):
-        """ Initialize game with assigned initial hand. """
-
-        self.hand = initial_hand
-
-    def save_model(self):
-        """ Save the model to the specified path. """
-
-        # NOP
-        pass
-
-    def load_model(self):
-        """ Load model from file. """
-
-        # NOP
-        pass
-
-    def evaluate_inference_mode(self):
-        """ No special evaluation needed. """
-
-        pass
-
-    def do_step(self, already_played, board, agents_finished,
-                next_action_wins_board=lambda a, b: False,
-                always_use_best=True, print_luck=False):
-        """
-            Performs a step in the game based on human input.
-
-            Returns (Player finished, Already played cards, New board)
-        """
+    def prepare_step(self):
+        """ Prepares the step to do. """
 
         # Show prompt for action
         print("It's your turn Player", self.playerIndex)
         print("                   1 2 3 4 5 6 7 8 9 . . . J")
         print("Your hand:       ", self.hand)
 
-        # If player has already finished, pass
-        if has_finished(self.hand):
-            return True, already_played, board, False
-
-        # Possible actions; Pass if no possible play
-        possible_actions = possible_next_moves(self.hand, board)
-        if len(possible_actions) == 1 and \
-                np.all(possible_actions[0] == 0):
-            return False, already_played, board, False
+    def decide_action_to_take(
+            self, already_played, board, always_use_best,
+            print_luck, possible_actions):
+        """ Returns (possible_qvalues, action_index, action_taken, 
+            random_choice, best_decision_made_randomly) """
 
         # Ask for action
         while True:
@@ -66,7 +30,8 @@ class HumanAgent:
 
             if cmd == "pass":
                 if not np.all(board == 0):
-                    return False, already_played, board, False
+                    action_index = 0
+                    break
                 else:
                     print("Invalid move.")
                     continue
@@ -96,10 +61,11 @@ class HumanAgent:
 
             if np.any(np.all(card_array_to_play == possible_actions, axis=1)) \
                     and not np.all(card_array_to_play == board):
-                self.hand -= card_array_to_play
-                next_board = card_array_to_play
-                next_already_played = already_played + next_board
-                return has_finished(self.hand), next_already_played, next_board, False
+                action_index = np.where(np.all(
+                    card_array_to_play == possible_actions, axis=1))[0][0]
+                break
             else:
                 print("Invalid move.")
                 continue
+
+        return (None, action_index, possible_actions[action_index], False, False)

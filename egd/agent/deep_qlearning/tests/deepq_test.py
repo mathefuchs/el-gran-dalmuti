@@ -4,7 +4,7 @@ import unittest
 
 from egd.game.cards import NUM_CARD_VALUES, get_cards_array
 from egd.game.state import random_initial_cards
-from egd.deep_qlearning.deepq_agent import DeepQAgent
+from egd.agent.deep_qlearning.deepq_agent import DeepQAgent
 
 
 class DeepQAgentTest(unittest.TestCase):

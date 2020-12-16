@@ -1,8 +1,8 @@
-from egd.simple_agents.human_agent import HumanAgent
-from egd.simple_agents.simple_agent import SimpleAgent
-from egd.simple_agents.random_agent import RandomAgent
-from egd.qlearning.agent import QLearningAgent
-from egd.deep_qlearning.deepq_agent import DeepQAgent
+from egd.agent.simple_agents.human_agent import HumanAgent
+from egd.agent.simple_agents.simple_agent import SimpleAgent
+from egd.agent.simple_agents.random_agent import RandomAgent
+from egd.agent.qlearning.qagent import QLearningAgent
+from egd.agent.deep_qlearning.deepq_agent import DeepQAgent
 
 
 def get_agent(player_index, agent_string, load_model):

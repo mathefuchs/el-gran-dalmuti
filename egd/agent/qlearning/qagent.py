@@ -3,14 +3,19 @@ import pandas as pd
 
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
-from egd.qlearning.qtable import QTable
+from egd.agent.base_agent import ModelBase
+from egd.agent.qlearning.qtable import QTable
 
 
-class QLearningAgent:
+class QLearningAgent(ModelBase):
 
-    def __init__(self, playerIndex):
+    def __init__(self, playerIndex, debug=False):
         """ Initialize an agent. """
 
+        # Initialize base class
+        super().__init__(playerIndex, debug=debug)
+
+        # Hyperparameters
         self.alpha = 0.5  # learning rate
         self.gamma = 0.95  # favour future rewards
         self.rewards = {
@@ -20,15 +25,14 @@ class QLearningAgent:
             3: -1.0,  # Three other agents finished before
         }
 
+        # Q table
         self.qtable = QTable()
-        self.playerIndex = playerIndex
-        self.debug = False
 
     def start_episode(self, initial_hand, num_episode=0):
         """ Initialize game with assigned initial hand. """
 
-        self.hand = initial_hand
-        self.num_episode = num_episode
+        super().start_episode(initial_hand, num_episode)
+
         # amount of random decisions
         self.epsilon = 1 / np.sqrt(num_episode / 2000 + 1)
 
@@ -47,30 +51,11 @@ class QLearningAgent:
             "./egd/saved_agents/qtable_agent_"
             + str(self.playerIndex) + ".csv")
 
-    def evaluate_inference_mode(self):
-        """ No special evaluation needed. """
-
-        pass
-
-    def do_step(self, already_played, board, agents_finished,
-                next_action_wins_board=lambda a, b: False,
-                always_use_best=False, print_luck=False):
-        """
-            Performs a step in the game.
-
-            Returns (Player finished, Already played cards,
-                New board, Best decision made randomly)
-        """
-
-        # If player has already finished, pass
-        if has_finished(self.hand):
-            return True, already_played, board, False
-
-        # Possible actions; Pass if no possible play
-        possible_actions = possible_next_moves(self.hand, board)
-        if len(possible_actions) == 1 and \
-                np.all(possible_actions[0] == 0):
-            return False, already_played, board, False
+    def decide_action_to_take(
+            self, already_played, board, always_use_best,
+            print_luck, possible_actions):
+        """ Returns (possible_qvalues, action_index, action_taken, 
+            random_choice, best_decision_made_randomly) """
 
         # Retrieve Q-Table for current state and add new if necessary
         learned_values = self.qtable.get_qtable_entry(
@@ -81,14 +66,20 @@ class QLearningAgent:
                   "- Learned Values", learned_values)
 
         # Do random decisions with a fixed probability
+        best_decision_made_randomly = False
         if not always_use_best and np.random.uniform() < self.epsilon:
+            random_decision = True
             action_index = np.random.choice(len(possible_actions))
         else:
+            random_decision = False
+
             # Debug "luck"
-            if print_luck and (np.all(learned_values == None)
-                               or np.all(learned_values.iloc[0, :] == 0)):
-                print("Player", self.playerIndex,
-                      "- Warning: Decision made randomly")
+            if (np.all(learned_values == None)
+                    or np.all(learned_values.iloc[0, :] == 0)):
+                best_decision_made_randomly = True
+                if print_luck:
+                    print("Player", self.playerIndex,
+                          "- Warning: Decision made randomly")
 
             if np.any(learned_values != None):
                 # Get best action with random tie-breaking
@@ -102,11 +93,20 @@ class QLearningAgent:
             else:
                 action_index = np.random.randint(len(possible_actions))
 
-        # Compute next state
         action_taken = possible_actions[action_index]
-        next_hand = self.hand - action_taken
-        next_board = board if np.all(action_taken == 0) else action_taken
-        next_already_played = already_played + action_taken
+        return (learned_values, action_index, action_taken,
+                random_decision, best_decision_made_randomly)
+
+    def process_next_board_state(
+            # Last board state
+            self, already_played, board,
+            # Next board state
+            next_already_played, next_board, next_hand,
+            # Decided action
+            learned_values, action_index, action_taken, random_choice,
+            # Other parameters
+            agents_finished, next_action_wins_board, always_use_best):
+        """ Processes the next board state. """
 
         # Retrieve next state's q-value
         next_qvalues = self.qtable.get_qtable_entry(
@@ -139,7 +139,3 @@ class QLearningAgent:
 
             self.qtable.update_qtable(
                 already_played, board, self.hand, update_func)
-
-        # Return next state
-        self.hand = next_hand
-        return has_finished(self.hand), next_already_played, next_board, False
