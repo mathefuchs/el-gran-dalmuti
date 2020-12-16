@@ -36,7 +36,7 @@ class DeepQAgent:
         self.train_each_n_steps = 64 if self.use_small_numbers else 512
         self.step_iteration = 0
         self.model_data_spec = (
-            tf.TensorSpec([4, 13, 1], tf.int8, "board_state"),
+            tf.TensorSpec([4 * 13], tf.int8, "board_state"),
             tf.TensorSpec([1], tf.float32, "q_value"),
         )
         self.replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
@@ -65,29 +65,11 @@ class DeepQAgent:
         # Create sequential model
         self.network = tf.keras.Sequential()
 
-        # Use to convolutional layers to group same cards
-        # of a kind among the different input vectors
-        self.network.add(tf.keras.layers.Conv2D(
-            # Input rows: Already played, board, hand, action
-            input_shape=(4, 13, 1),
-            # Window size
-            kernel_size=(3, 3),
-            # Output filters
-            filters=11,
-            # Activation
+        # Use simple fully-connected layers
+        self.network.add(tf.keras.layers.Dense(
+            4 * 13,
             activation=tf.keras.activations.relu
         ))
-        self.network.add(tf.keras.layers.Conv2D(
-            # Window size
-            kernel_size=(2, 2),
-            # Output filters
-            filters=13,
-            # Activation
-            activation=tf.keras.activations.relu
-        ))
-
-        # Flatten convolutional layers
-        self.network.add(tf.keras.layers.Flatten())
         self.network.add(tf.keras.layers.Dense(
             13,
             activation=tf.keras.activations.relu
@@ -98,8 +80,8 @@ class DeepQAgent:
 
         # Compile neural network, use mean-squared error
         self.network.compile(
-            loss=tf.keras.losses.Huber(),
-            optimizer=tf.keras.optimizers.RMSprop(),
+            loss=tf.keras.losses.MeanSquaredError(),
+            optimizer=tf.keras.optimizers.SGD(),
             metrics=[
                 tf.keras.losses.Huber(),
                 tf.keras.losses.MeanSquaredError(),
@@ -134,21 +116,16 @@ class DeepQAgent:
         """ Converts the given arrays to a representation 
             understood by the model. """
 
-        enc_already_played = np.resize(already_played, (13, 1))
-        enc_board = np.resize(board, (13, 1))
-        enc_hand = np.resize(hand, (13, 1))
-
         stack_list = []
         for action in actions:
             if action.shape[0] != NUM_CARD_VALUES:
                 raise Exception("Action has wrong shape.")
 
-            stack_list.append([
-                enc_already_played, enc_board,
-                enc_hand, np.resize(action, (13, 1))
-            ])
+            stack_list.append(np.hstack([
+                already_played, board, hand, action
+            ]))
 
-        return np.stack(stack_list, axis=0)
+        return np.vstack(stack_list)
 
     @tf.autograph.experimental.do_not_convert
     def evaluate_inference_mode(self):

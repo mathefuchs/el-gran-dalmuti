@@ -16,8 +16,8 @@ class DeepQAgentTest(unittest.TestCase):
         board = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         hand = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         actions = np.array([
-            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         ])
 
         agent = DeepQAgent(0)
@@ -26,16 +26,16 @@ class DeepQAgentTest(unittest.TestCase):
         x = agent.convert_to_data_batch(already_played, board, hand, actions)
         self.assertTrue(np.all(x == np.array([
             [
-                [[0], [0], [2], [0], [4], [0], [0], [0], [0], [0], [0], [0], [0]],
-                [[0], [0], [1], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]],
-                [[1], [1], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]],
-                [[0], [1], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]]
+                0, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
             ],
             [
-                [[0], [0], [2], [0], [4], [0], [0], [0], [0], [0], [0], [0], [0]],
-                [[0], [0], [1], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]],
-                [[1], [1], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]],
-                [[1], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]]
+                0, 0, 2, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
             ]
         ])))
 
@@ -50,10 +50,12 @@ class DeepQAgentTest(unittest.TestCase):
         agent = DeepQAgent(0)
         agent.start_episode(hand, 0)
 
-        # Fit observation to network
-        x = agent.convert_to_data_batch(already_played, board, hand, [action])
-        agent.replay_buffer.add_batch((x.copy(), 1.0))
-        agent.fit_values_to_network()
+        # Fit observation to network by filling replay buffer
+        x = agent.convert_to_data_batch(
+            already_played, board, hand, [action])
+        agent.replay_buffer.add_batch((x, 1.0))
+        for _ in range(10):
+            agent.fit_values_to_network()
 
         # Predict for same situation
         pred_q_value = agent.predict_q_values_from_network(
