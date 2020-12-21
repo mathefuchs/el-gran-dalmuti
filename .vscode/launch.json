@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Train DeepQAgent",
+            "type": "python",
+            "request": "launch",
+            "program": "./egd/main.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "--player0",
+                "DeepQAgent",
+                "--player1",
+                "Simple",
+                "--player2",
+                "Random",
+                "--player3",
+                "Random",
+                "--games",
+                "100000",
+                "--loadmodel",
+                "0",
+                "--savemodel",
+                "1",
+                "--inference",
+                "0",
+                "--parallel",
+                "0",
+            ]
+        }
+    ]
+}
