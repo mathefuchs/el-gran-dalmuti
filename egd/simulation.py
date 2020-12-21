@@ -54,12 +54,37 @@ def play_single_game(agents, epoch, verbose, inference):
                 return False
 
         # Perform a move
-        _, finished, new_already_played, new_board, best_dec_rand = \
-            agents[current_player].do_step(
-                StepState.step_completed,
+        step_result = agents[current_player].do_step(
+            StepState.step_completed,
+            already_played, board, len(finished_players),
+            next_action_wins_board=next_action_wins_board,
+            always_use_best=inference, print_luck=verbose)
+
+        # Execute prediction immediately
+        if step_result[0] is StepState.step_needs_predict:
+            (_, rand_action_index, input_to_predict,
+             already_played, board) = step_result
+
+            # Make prediction
+            predictions = agents[current_player].network.predict(
+                input_to_predict).flatten()
+
+            # Feed predictions back
+            (_, finished, new_already_played,
+             new_board, best_dec_rand) = agents[current_player].do_step(
+                StepState.step_needs_predict,
                 already_played, board, len(finished_players),
                 next_action_wins_board=next_action_wins_board,
-                always_use_best=inference, print_luck=verbose)
+                always_use_best=inference, print_luck=verbose,
+                required_predictions=predictions,
+                actions_for_pred=input_to_predict[:, -NUM_CARD_VALUES:],
+                rand_action_index=rand_action_index
+            )
+
+        # Results already ready
+        else:
+            (_, finished, new_already_played,
+             new_board, best_dec_rand) = step_result
 
         # Amount of random decisions for evaluation
         number_decisions[current_player] += 1
