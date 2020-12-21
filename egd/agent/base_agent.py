@@ -14,7 +14,6 @@ from egd.game.moves import possible_next_moves
 class StepState(enum.Enum):
     step_completed = 0
     step_needs_predict = 1
-    step_add_replay = 2
 
 
 class ModelBase(abc.ABC):
@@ -56,10 +55,27 @@ class ModelBase(abc.ABC):
     def decide_action_to_take(
             self, already_played, board, always_use_best,
             print_luck, possible_actions):
-        """ Returns (possible_qvalues, action_index, action_taken, 
-            random_choice, best_decision_made_randomly) """
+        """ Returns (
+                decision_made=True, possible_qvalues, action_index, 
+                action_taken, random_choice, best_decision_made_randomly
+            ) or (
+                decision_made=False, random_action_taken or -1,
+                inputs to predict
+            )
+        """
 
         pass
+
+    def decide_action_based_on_predictions(
+            self, predictions_made, print_luck, 
+            possible_actions, rand_action_index):
+        """ Returns (
+                possible_qvalues, action_index, action_taken, 
+                random_choice, best_decision_made_randomly
+            )
+        """
+
+        return ([], -1, None, False, False)
 
     def process_next_board_state(
             # Last board state
@@ -82,36 +98,62 @@ class ModelBase(abc.ABC):
             # Whether a specified action wins the board
             next_action_wins_board=lambda a, b: False,
             # Other parameters
-            always_use_best=False, print_luck=False):
+            always_use_best=False, print_luck=False,
+            # Step parameters if last_step_state is step_needs_predict
+            required_predictions=None, actions_for_pred=None, 
+            rand_action_index=-1):
         """
             Performs a (partial) step in the game.
 
-            Returns (Next step state, Player finished, 
-                Already played cards, New board, 
-                Best decision made randomly)
+            Returns 
+                (
+                    StepState.step_completed, Player finished, 
+                    Already played cards, New board, 
+                    Best decision made randomly
+                ) or (
+                    StepState.step_needs_predict, rand_action_index,
+                    inputs to predict, Already played cards, board
+                )
         """
 
-        # Prepares the step to do
-        self.prepare_step()
+        # Begin new step if last step completed
+        if last_step_state is StepState.step_completed:
 
-        # If player has already finished, pass
-        if has_finished(self.hand):
-            return (StepState.step_completed, True,
-                    already_played, board, False)
+            # Prepares the step to do
+            self.prepare_step()
 
-        # Possible actions; Pass if no possible play
-        possible_actions = possible_next_moves(self.hand, board)
-        if len(possible_actions) == 1 and \
-                np.all(possible_actions[0] == 0):
-            return (StepState.step_completed, False,
-                    already_played, board, False)
+            # If player has already finished, pass
+            if has_finished(self.hand):
+                return (StepState.step_completed, True,
+                        already_played, board, False)
 
-        # Decide action to take
-        (possible_qvalues, action_index, action_taken,
-         random_choice, best_decision_made_randomly) = \
-            self.decide_action_to_take(
+            # Possible actions; Pass if no possible play
+            possible_actions = possible_next_moves(self.hand, board)
+            if len(possible_actions) == 1 and \
+                    np.all(possible_actions[0] == 0):
+                return (StepState.step_completed, False,
+                        already_played, board, False)
+
+            # Decide action to take
+            decision_made = self.decide_action_to_take(
                 already_played, board, always_use_best,
                 print_luck, possible_actions)
+            if decision_made[0]:
+                (_, possible_qvalues, action_index, action_taken,
+                 random_choice, best_decision_made_randomly) = decision_made
+            else:
+                _, rand_action_index, inputs_to_predict = decision_made
+                return (StepState.step_needs_predict, rand_action_index,
+                        inputs_to_predict, already_played, board)
+
+        # Process computed q-values if available.
+        if last_step_state is StepState.step_needs_predict:
+            # Process predictions received
+            (possible_qvalues, action_index, action_taken,
+             random_choice, best_decision_made_randomly) = \
+                self.decide_action_based_on_predictions(
+                    required_predictions, print_luck, 
+                    actions_for_pred, rand_action_index)
 
         # Compute next state
         next_hand = self.hand - action_taken

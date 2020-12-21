@@ -157,33 +157,28 @@ class DeepQAgent(ModelBase):
             self.convert_to_data_batch(already_played, board, hand, actions)
         ).flatten()
 
-    def decide_action_to_take(
-            self, already_played, board, always_use_best,
-            print_luck, possible_actions):
-        """ Returns (possible_qvalues, action_index, action_taken, 
-            random_choice, best_decision_made_randomly) """
+    def decide_action_based_on_predictions(
+            self, predictions_made, print_luck,
+            possible_actions, rand_action_index):
+        """ Returns (
+                possible_qvalues, action_index, action_taken, 
+                random_choice, best_decision_made_randomly
+            )
+        """
 
         # Do random decisions with a fixed probability
         best_decision_made_randomly = False
-        if not always_use_best and np.random.uniform() < self.epsilon:
+        if rand_action_index is not -1:
             # Chose action randomly
             random_choice = True
-            action_index = np.random.choice(len(possible_actions))
+            action_index = rand_action_index
             action_taken = possible_actions[action_index]
-
-            # Get q-value estimate only for chosen action
-            possible_qvalues = self.predict_q_values_from_network(
-                already_played, board, self.hand,
-                [action_taken]
-            )[0]
+            possible_qvalues = predictions_made
         else:
             # Get predictions for all possible actions
-            possible_qvalues = self.predict_q_values_from_network(
-                already_played, board, self.hand,
-                possible_actions  # Possible actions
-            )
-            close_to_max = np.isclose(possible_qvalues,
-                                      np.nanmax(possible_qvalues))
+            possible_qvalues = predictions_made
+            close_to_max = np.isclose(
+                possible_qvalues, np.nanmax(possible_qvalues))
 
             # Debug "luck"
             best_decision_made_randomly = np.count_nonzero(close_to_max) > 1
@@ -198,6 +193,33 @@ class DeepQAgent(ModelBase):
 
         return (possible_qvalues, action_index, action_taken,
                 random_choice, best_decision_made_randomly)
+
+    def decide_action_to_take(
+            self, already_played, board, always_use_best,
+            print_luck, possible_actions):
+        """ Returns (
+                decision_made=False, random_action_taken or -1,
+                inputs to predict
+            )
+        """
+
+        # Do random decisions with a fixed probability
+        if not always_use_best and np.random.uniform() < self.epsilon:
+            # Chose action randomly
+            action_index = np.random.choice(len(possible_actions))
+            action_taken = possible_actions[action_index]
+
+            # Return data to predict
+            return (
+                False, action_index, self.convert_to_data_batch(
+                    already_played, board, self.hand, [action_taken])
+            )
+        else:
+            # Predict q-values of all possible actions
+            return (
+                False, -1, self.convert_to_data_batch(
+                    already_played, board, self.hand, possible_actions)
+            )
 
     def process_next_board_state(
             # Last board state
