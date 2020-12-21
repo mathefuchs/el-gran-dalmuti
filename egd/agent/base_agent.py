@@ -67,7 +67,7 @@ class ModelBase(abc.ABC):
         pass
 
     def decide_action_based_on_predictions(
-            self, predictions_made, print_luck, 
+            self, predictions_made, print_luck,
             possible_actions, rand_action_index):
         """ Returns (
                 possible_qvalues, action_index, action_taken, 
@@ -100,7 +100,7 @@ class ModelBase(abc.ABC):
             # Other parameters
             always_use_best=False, print_luck=False,
             # Step parameters if last_step_state is step_needs_predict
-            required_predictions=None, actions_for_pred=None, 
+            required_predictions=None, actions_for_pred=None,
             rand_action_index=-1):
         """
             Performs a (partial) step in the game.
@@ -117,7 +117,7 @@ class ModelBase(abc.ABC):
         """
 
         # Begin new step if last step completed
-        if last_step_state is StepState.step_completed:
+        if last_step_state == StepState.step_completed:
 
             # Prepares the step to do
             self.prepare_step()
@@ -147,12 +147,12 @@ class ModelBase(abc.ABC):
                         inputs_to_predict, already_played, board)
 
         # Process computed q-values if available.
-        if last_step_state is StepState.step_needs_predict:
+        if last_step_state == StepState.step_needs_predict:
             # Process predictions received
             (possible_qvalues, action_index, action_taken,
              random_choice, best_decision_made_randomly) = \
                 self.decide_action_based_on_predictions(
-                    required_predictions, print_luck, 
+                    required_predictions, print_luck,
                     actions_for_pred, rand_action_index)
 
         # Compute next state

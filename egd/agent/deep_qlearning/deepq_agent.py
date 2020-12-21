@@ -168,11 +168,11 @@ class DeepQAgent(ModelBase):
 
         # Do random decisions with a fixed probability
         best_decision_made_randomly = False
-        if rand_action_index is not -1:
+        if rand_action_index != -1:
             # Chose action randomly
             random_choice = True
             action_index = rand_action_index
-            action_taken = possible_actions[action_index]
+            action_taken = possible_actions[0]
             possible_qvalues = predictions_made
         else:
             # Get predictions for all possible actions
@@ -254,7 +254,7 @@ class DeepQAgent(ModelBase):
 
         # Determine new q-value
         old_qvalue = possible_qvalues[action_index] \
-            if not random_choice else possible_qvalues
+            if not random_choice else possible_qvalues[0]
         new_qvalue = (1 - self.alpha) * old_qvalue + \
             self.alpha * (reward_earned + self.gamma * next_max)
 
