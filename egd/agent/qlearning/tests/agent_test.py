@@ -19,7 +19,7 @@ class QLearningAgentTest(unittest.TestCase):
         agent.debug = False
         agent.start_episode(initial_cards[0], 0)
 
-        _, finished, new_already_played, new_board, _ = \
+        finished, new_already_played, new_board, _ = \
             agent.do_step(np.zeros(NUM_CARD_VALUES, dtype=np.int8),
                           np.zeros(NUM_CARD_VALUES, dtype=np.int8),
                           0, always_use_best=True)  # Enforce deterministic behaviour
@@ -38,7 +38,7 @@ class QLearningAgentTest(unittest.TestCase):
 
         already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
         board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-        _, finished, new_already_played, new_board, _ = \
+        finished, new_already_played, new_board, _ = \
             agent.do_step(already_played, board, 0)
 
         self.assertTrue(finished)
@@ -61,7 +61,7 @@ class QLearningAgentTest(unittest.TestCase):
 
         already_played = get_cards_array(2, 2)
         board = get_cards_array(2, 2)
-        _, finished, new_already_played, new_board, _ = \
+        finished, new_already_played, new_board, _ = \
             agent.do_step(already_played, board, 0)
 
         self.assertFalse(finished)
