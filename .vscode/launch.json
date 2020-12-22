@@ -24,7 +24,7 @@
                 "--player0",
                 "DeepQAgent",
                 "--player1",
-                "Simple",
+                "Random",
                 "--player2",
                 "Random",
                 "--player3",

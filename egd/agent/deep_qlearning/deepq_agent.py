@@ -21,7 +21,7 @@ class DeepQAgent(ModelBase):
         self.use_small_numbers = use_small_nums
 
         # Hyperparameters
-        self.alpha = 0.75  # learning rate
+        self.alpha = 0.01  # learning rate
         self.gamma = 0.95  # favour future rewards
         self.exploration_decay_rate = 1 / 2000
         self.reward_win_round = 0.005
@@ -76,11 +76,14 @@ class DeepQAgent(ModelBase):
 
         # Final dense layer for q-value
         self.network.add(tf.keras.layers.Dense(1))
+        self.network.add(tf.keras.layers.BatchNormalization())
+        self.network.add(tf.keras.layers.Activation(
+            tf.keras.activations.sigmoid))
 
         # Compile neural network, use mean-squared error
         self.network.compile(
             loss=tf.keras.losses.MeanSquaredError(),
-            optimizer=tf.keras.optimizers.SGD(),
+            optimizer=tf.keras.optimizers.SGD(learning_rate=self.alpha),
             metrics=[
                 tf.keras.losses.Huber(),
                 tf.keras.losses.MeanSquaredError(),
@@ -156,7 +159,8 @@ class DeepQAgent(ModelBase):
     def predict_q_values_from_network(self, data_to_predict):
         """ Predicts q-values from the trained neural net. """
 
-        return self.network.predict(data_to_predict).flatten()
+        # Scale predictions from [0, 1] to [-1, 1]
+        return self.network.predict(data_to_predict).flatten() * 2.0 - 1.0
 
     def decide_action_to_take(
             self, already_played, board, always_use_best,
@@ -211,27 +215,30 @@ class DeepQAgent(ModelBase):
             agents_finished, always_use_best):
         """ Processes the next board state. """
 
-        # List next possible states
-        next_already_played_list, next_boards = \
-            list_next_possible_states(next_ap, next_b)
+        if not has_finished(next_hand):
+            # List next possible states
+            next_already_played_list, next_boards = \
+                list_next_possible_states(next_ap, next_b)
 
-        # Retrieve next state's max q-value
-        next_possible_actions, next_boards, next_already_played_list = \
-            possible_next_moves_for_all(
-                next_hand, next_boards, next_already_played_list)
+            # Retrieve next state's max q-value
+            next_possible_actions, next_boards, next_already_played_list = \
+                possible_next_moves_for_all(
+                    next_hand, next_boards, next_already_played_list)
 
-        next_qvalues = self.predict_q_values_from_network(
-            self.convert_to_data_batch(
-                next_already_played_list, next_boards,
-                next_hand, next_possible_actions))
-        # FIXME compute weighted average based on the probabilites.
-        # Use mean since best action for agent is probably not going to happen
-        next_max = np.nanmean(next_qvalues)
+            next_qvalues = self.predict_q_values_from_network(
+                self.convert_to_data_batch(
+                    next_already_played_list, next_boards,
+                    next_hand, next_possible_actions))
+            # FIXME compute weighted average based on the probabilites.
+            # Use mean since best action for agent is probably not going to happen
+            next_max = np.nanmean(next_qvalues)
 
         # Determine reward
         if has_finished(next_hand):
             # Reward based on how many other agents are already finished
             reward_earned = self.rewards[agents_finished]
+            # Terminal state has q-value zero
+            next_max = 0
         elif np.all(np.all(
             (next_already_played_list - next_possible_actions)
                 == already_played, axis=1)):
@@ -243,10 +250,7 @@ class DeepQAgent(ModelBase):
                 np.linalg.norm(action_taken, 1)
 
         # Determine new q-value
-        old_qvalue = possible_qvalues[action_index] \
-            if not random_choice else possible_qvalues
-        new_qvalue = (1 - self.alpha) * old_qvalue + \
-            self.alpha * (reward_earned + self.gamma * next_max)
+        future_qvalue = reward_earned + self.gamma * next_max
 
         # Do not train in inference mode
         if not always_use_best:
@@ -254,7 +258,7 @@ class DeepQAgent(ModelBase):
             self.replay_buffer.add_batch((
                 self.convert_to_data_batch(
                     [already_played], [board], self.hand, [action_taken]
-                ), new_qvalue))
+                ), future_qvalue))
 
             # Fit neural net to observed replays
             if self.step_iteration != 0 and self.step_iteration % \
@@ -267,4 +271,4 @@ class DeepQAgent(ModelBase):
             self.validation_buffer.add_batch((
                 self.convert_to_data_batch(
                     [already_played], [board], self.hand, [action_taken]
-                ), new_qvalue))
+                ), future_qvalue))
