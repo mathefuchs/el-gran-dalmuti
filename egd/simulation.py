@@ -61,7 +61,7 @@ def play_single_game(agents, epoch, verbose, inference):
             always_use_best=inference, print_luck=verbose)
 
         # Execute prediction immediately
-        if step_result[0] == StepState.step_needs_predict:
+        if step_result[0] is StepState.step_needs_predict:
             (_, rand_action_index, input_to_predict,
              already_played, board) = step_result
 
