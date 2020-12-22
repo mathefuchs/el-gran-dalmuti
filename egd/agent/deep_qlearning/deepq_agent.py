@@ -76,9 +76,6 @@ class DeepQAgent(ModelBase):
 
         # Final dense layer for q-value
         self.network.add(tf.keras.layers.Dense(1))
-        # self.network.add(tf.keras.layers.BatchNormalization())
-        self.network.add(tf.keras.layers.Activation(
-            tf.keras.activations.sigmoid))
 
         # Compile neural network, use mean-squared error
         self.network.compile(
@@ -160,7 +157,7 @@ class DeepQAgent(ModelBase):
         """ Predicts q-values from the trained neural net. """
 
         # Scale predictions from [0, 1] to [-1, 1]
-        return self.network.predict(data_to_predict).flatten() * 2.0 - 1.0
+        return self.network.predict(data_to_predict).flatten()
 
     def decide_action_to_take(
             self, already_played, board, always_use_best,
