@@ -36,7 +36,7 @@ class DeepQAgent(ModelBase):
         # Training/Batch parameters
         self.sample_batch = 64 if self.use_small_numbers else 512
         self.replay_capacity = 128 if self.use_small_numbers else 1024
-        self.train_each_n_steps = 64 if self.use_small_numbers else 512
+        self.train_each_n_steps = 5 if self.use_small_numbers else 50
         self.step_iteration = 0
         self.model_data_spec = (
             tf.TensorSpec([4 * 13], tf.int8, "board_state"),
@@ -76,7 +76,7 @@ class DeepQAgent(ModelBase):
 
         # Final dense layer for q-value
         self.network.add(tf.keras.layers.Dense(1))
-        self.network.add(tf.keras.layers.BatchNormalization())
+        # self.network.add(tf.keras.layers.BatchNormalization())
         self.network.add(tf.keras.layers.Activation(
             tf.keras.activations.sigmoid))
 
