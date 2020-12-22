@@ -3,7 +3,7 @@ import tensorflow as tf
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 
-from egd.agent.base_agent import ModelBase
+from egd.agent.base_agent import ModelBase, StepState
 from egd.config import use_small_nums
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import has_finished, NUM_PLAYERS
@@ -230,14 +230,35 @@ class DeepQAgent(ModelBase):
             possible_qvalues, action_index, action_taken, random_choice,
             # Other parameters
             agents_finished, next_action_wins_board, always_use_best):
-        """ Processes the next board state. """
+        """ Processes the next board state. 
+
+            Returns (StepState.step_completed,) or (
+                StepState.step_predict_next, next_actions_to_predict
+            )
+        """
 
         # Retrieve next state's max q-value
         next_possible_actions = \
             possible_next_moves(next_hand, next_board)
-        next_qvalues = self.predict_q_values_from_network(
+
+        # Require prediction of next actions
+        return (StepState.step_predict_next, self.convert_to_data_batch(
+            next_already_played, next_board, next_hand, next_possible_actions))
+
+    def process_next_action_qvalues(
+            # Last board state
+            self, already_played, board,
+            # Next board state
             next_already_played, next_board, next_hand,
-            next_possible_actions)
+            # Decided action
+            possible_qvalues, action_index, action_taken, random_choice,
+            # Other parameters
+            agents_finished, next_action_wins_board, always_use_best,
+            # Next action q-values
+            next_action_qvalues):
+        """ Processes the next board state. """
+
+        next_qvalues = next_action_qvalues
         next_max = np.nanmax(next_qvalues)
 
         # Determine reward

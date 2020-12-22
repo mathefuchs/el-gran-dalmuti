@@ -14,6 +14,7 @@ from egd.game.moves import possible_next_moves
 class StepState(enum.Enum):
     step_completed = 0
     step_needs_predict = 1
+    step_predict_next = 2
 
 
 class ModelBase(abc.ABC):
@@ -86,6 +87,26 @@ class ModelBase(abc.ABC):
             possible_qvalues, action_index, action_taken, random_choice,
             # Other parameters
             agents_finished, next_action_wins_board, always_use_best):
+        """ Processes the next board state. 
+
+            Returns (StepState.step_completed,) or (
+                StepState.step_predict_next, next_actions_to_predict
+            )
+        """
+
+        return (StepState.step_completed,)
+
+    def process_next_action_qvalues(
+            # Last board state
+            self, already_played, board,
+            # Next board state
+            next_already_played, next_board, next_hand,
+            # Decided action
+            possible_qvalues, action_index, action_taken, random_choice,
+            # Other parameters
+            agents_finished, next_action_wins_board, always_use_best,
+            # Next action q-values
+            next_action_qvalues):
         """ Processes the next board state. """
 
         pass
@@ -101,7 +122,12 @@ class ModelBase(abc.ABC):
             always_use_best=False, print_luck=False,
             # Step parameters if last_step_state is step_needs_predict
             required_predictions=None, actions_for_pred=None,
-            rand_action_index=-1):
+            rand_action_index=-1,
+            # Step parameter if last_step_state is step_predict_next
+            next_already_played=None, next_board=None, next_hand=None,
+            possible_qvalues=None, action_index=None, action_taken=None,
+            random_choice=None, next_action_qvalues=None,
+            best_decision_made_randomly=None):
         """
             Performs a (partial) step in the game.
 
@@ -113,8 +139,28 @@ class ModelBase(abc.ABC):
                 ) or (
                     StepState.step_needs_predict, rand_action_index,
                     inputs to predict, Already played cards, board
+                ) or (
+                    StepState.step_predict_next, already_played, board,
+                    next_already_played, next_board, next_hand,
+                    possible_qvalues, action_index, action_taken,
+                    random_choice, agents_finished, next_action_wins_board,
+                    always_use_best, next_state_results
                 )
         """
+
+        if last_step_state == StepState.step_predict_next:
+            # Process made predictions
+            self.process_next_action_qvalues(
+                already_played, board, next_already_played, next_board,
+                next_hand, possible_qvalues, action_index, action_taken,
+                random_choice, agents_finished, next_action_wins_board,
+                always_use_best, next_action_qvalues
+            )
+
+            # Return next state, ready for next step
+            self.hand = next_hand
+            return (StepState.step_completed, has_finished(self.hand),
+                    next_already_played, next_board, best_decision_made_randomly)
 
         # Begin new step if last step completed
         if last_step_state == StepState.step_completed:
@@ -161,14 +207,24 @@ class ModelBase(abc.ABC):
         next_already_played = already_played + action_taken
 
         # Process next state
-        self.process_next_board_state(
+        next_state_results = self.process_next_board_state(
             already_played, board,
             next_already_played, next_board, next_hand,
             possible_qvalues, action_index, action_taken, random_choice,
             agents_finished, next_action_wins_board, always_use_best
         )
 
-        # Return next state
-        self.hand = next_hand
-        return (StepState.step_completed, has_finished(self.hand),
-                next_already_played, next_board, best_decision_made_randomly)
+        if next_state_results[0] == StepState.step_predict_next:
+            # Require predictions for all next actions
+            return (
+                StepState.step_predict_next, next_already_played, next_board,
+                next_hand, possible_qvalues, action_index, action_taken,
+                random_choice, best_decision_made_randomly,
+                next_state_results[1],
+            )
+
+        else:
+            # Return next state, ready for next step
+            self.hand = next_hand
+            return (StepState.step_completed, has_finished(self.hand),
+                    next_already_played, next_board, best_decision_made_randomly)
