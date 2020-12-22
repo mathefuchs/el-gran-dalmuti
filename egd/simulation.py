@@ -45,6 +45,7 @@ def play_single_game(agents, epoch, verbose, inference):
             next_aps = [ap]
             next_bs = [b]
 
+            # FIXME data leakage, hand of other players should be secret
             for next_player in next_players:
                 _, next_bs, next_aps = possible_next_moves_for_all(
                     agents[next_player].hand, next_bs, next_aps)
