@@ -15,4 +15,4 @@ class RandomAgent(ModelBase):
         action_index = np.random.randint(len(possible_actions))
         action_taken = possible_actions[action_index]
 
-        return (True, None, action_index, action_taken, True, True)
+        return (None, action_index, action_taken, True, True)

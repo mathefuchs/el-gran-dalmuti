@@ -68,5 +68,4 @@ class HumanAgent(ModelBase):
                 print("Invalid move.")
                 continue
 
-        return (True, None, action_index,
-                possible_actions[action_index], False, False)
+        return (None, action_index, possible_actions[action_index], False, False)

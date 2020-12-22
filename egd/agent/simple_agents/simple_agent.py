@@ -16,4 +16,4 @@ class SimpleAgent(ModelBase):
         action_index = 0 if np.all(board == 0) else 1
         action_taken = possible_actions[action_index]
 
-        return (True, None, action_index, action_taken, False, False)
+        return (None, action_index, action_taken, False, False)

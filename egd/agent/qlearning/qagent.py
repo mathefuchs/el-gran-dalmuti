@@ -94,7 +94,7 @@ class QLearningAgent(ModelBase):
                 action_index = np.random.randint(len(possible_actions))
 
         action_taken = possible_actions[action_index]
-        return (True, learned_values, action_index, action_taken,
+        return (learned_values, action_index, action_taken,
                 random_decision, best_decision_made_randomly)
 
     def process_next_board_state(
