@@ -37,13 +37,54 @@ def play_single_game(agents, epoch, verbose, inference):
     while len(finished_players) < NUM_PLAYERS:
         # Current player
         current_player = order_of_play[current_player_index]
+        next_players = [order_of_play[
+            (current_player_index + i) %
+            NUM_PLAYERS] for i in range(1, NUM_PLAYERS)]
 
-        # Perform step
-        _, finished, new_already_played, new_board, best_dec_rand = \
-            perform_step(
-                agents, order_of_play, current_player_index,
-                already_played, board, finished_players,
-                inference, verbose)
+        # Check whether action wins board
+        def next_action_wins_board(next_already_played, next_board):
+            next_player_index = 0
+            while next_player_index < NUM_PLAYERS - 1 and only_passing_possible(
+                    agents[next_players[next_player_index]].hand, next_board):
+                next_player_index += 1
+
+            if next_player_index == NUM_PLAYERS - 1:
+                return True
+            else:
+                return False
+
+        # Perform a move
+        step_result = agents[current_player].do_step(
+            StepState.step_completed,
+            already_played, board, len(finished_players),
+            next_action_wins_board=next_action_wins_board,
+            always_use_best=inference, print_luck=verbose)
+
+        # Execute prediction immediately
+        if step_result[0] == StepState.step_needs_predict:
+            (_, rand_action_index, input_to_predict,
+             already_played, board) = step_result
+
+            # Make prediction
+            predictions = agents[current_player].network.predict(
+                input_to_predict).flatten()
+
+            # Feed predictions back
+            (_, finished, new_already_played,
+             new_board, best_dec_rand) = agents[current_player].do_step(
+                StepState.step_needs_predict,
+                already_played, board, len(finished_players),
+                next_action_wins_board=next_action_wins_board,
+                always_use_best=inference, print_luck=verbose,
+                required_predictions=predictions,
+                actions_for_pred=input_to_predict[:, -NUM_CARD_VALUES:],
+                rand_action_index=rand_action_index
+            )
+
+        # Results already ready
+        else:
+            (_, finished, new_already_played,
+             new_board, best_dec_rand) = step_result
 
         # Amount of random decisions for evaluation
         number_decisions[current_player] += 1
@@ -91,91 +132,6 @@ def play_single_game(agents, epoch, verbose, inference):
 
     # Return ranking of game
     return finished_players, best_decisions_randomly / number_decisions
-
-
-def perform_step(
-        agents, order_of_play, current_player_index, already_played, board,
-        finished_players, inference, verbose):
-    """ Returns (
-            step, finished, new_already_played,
-            new_board, best_dec_rand)
-    """
-
-    # Current player
-    current_player = order_of_play[current_player_index]
-    next_players = [order_of_play[
-        (current_player_index + i) %
-        NUM_PLAYERS] for i in range(1, NUM_PLAYERS)]
-
-    # Check whether action wins board
-    def next_action_wins_board(next_already_played, next_board):
-        next_player_index = 0
-        while next_player_index < NUM_PLAYERS - 1 and only_passing_possible(
-                agents[next_players[next_player_index]].hand, next_board):
-            next_player_index += 1
-
-        if next_player_index == NUM_PLAYERS - 1:
-            return True
-        else:
-            return False
-
-    # Perform a move
-    step_result = agents[current_player].do_step(
-        StepState.step_completed,
-        already_played, board, len(finished_players),
-        next_action_wins_board=next_action_wins_board,
-        always_use_best=inference, print_luck=verbose)
-
-    # Execute prediction immediately
-    if step_result[0] == StepState.step_needs_predict:
-        (_, rand_action_index, input_to_predict,
-            already_played, board) = step_result
-
-        # Make prediction
-        predictions = agents[current_player].network.predict(
-            input_to_predict).flatten()
-
-        # Feed predictions back
-        return agents[current_player].do_step(
-            StepState.step_needs_predict,
-            already_played, board, len(finished_players),
-            next_action_wins_board=next_action_wins_board,
-            always_use_best=inference, print_luck=verbose,
-            required_predictions=predictions,
-            actions_for_pred=input_to_predict[:, -NUM_CARD_VALUES:],
-            rand_action_index=rand_action_index
-        )
-
-    # Execute prediction immediately
-    elif step_result[0] == StepState.step_predict_next:
-        (
-            _, next_already_played, next_board, next_hand,
-            possible_qvalues, action_index, action_taken,
-            random_choice, best_decision_made_randomly,
-            next_actions_to_predict
-        ) = step_result
-
-        # Make prediction
-        predictions = agents[current_player].network.predict(
-            next_actions_to_predict).flatten()
-
-        # Feed predictions back
-        return agents[current_player].do_step(
-            StepState.step_predict_next, already_played,
-            board, len(finished_players),
-            next_action_wins_board=next_action_wins_board,
-            always_use_best=inference, print_luck=verbose,
-            next_already_played=next_already_played,
-            next_board=next_board, next_hand=next_hand,
-            possible_qvalues=possible_qvalues, action_index=action_index,
-            action_taken=action_taken, random_choice=random_choice,
-            next_action_qvalues=predictions,
-            best_decision_made_randomly=best_decision_made_randomly
-        )
-
-    # Results already ready
-    else:
-        return step_result
 
 
 def do_simulation(agents, agent_strings, num_epochs,
