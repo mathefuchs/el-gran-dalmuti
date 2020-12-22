@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from egd.agent.base_agent import StepState, ModelBase
+from egd.agent.base_agent import ModelBase
 from egd.game.cards import get_cards_array, JOKER
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves

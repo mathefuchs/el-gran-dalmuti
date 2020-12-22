@@ -7,7 +7,6 @@ from egd.evaluation import print_validation_results
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
 from egd.game.moves import possible_next_moves, only_passing_possible
-from egd.agent.base_agent import StepState
 
 
 def play_single_game(agents, epoch, verbose, inference):
@@ -54,9 +53,8 @@ def play_single_game(agents, epoch, verbose, inference):
                 return False
 
         # Perform a move
-        _, finished, new_already_played, new_board, best_dec_rand = \
+        finished, new_already_played, new_board, best_dec_rand = \
             agents[current_player].do_step(
-                StepState.step_completed,
                 already_played, board, len(finished_players),
                 next_action_wins_board=next_action_wins_board,
                 always_use_best=inference, print_luck=verbose)

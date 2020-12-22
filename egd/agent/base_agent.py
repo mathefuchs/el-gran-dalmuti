@@ -11,12 +11,6 @@ from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
 
 
-class StepState(enum.Enum):
-    step_completed = 0
-    step_needs_predict = 1
-    step_add_replay = 2
-
-
 class ModelBase(abc.ABC):
 
     def __init__(self, playerIndex, debug=False):
@@ -75,10 +69,8 @@ class ModelBase(abc.ABC):
         pass
 
     def do_step(
-            # Where to resume the step
-            self, last_step_state,
             # Board state
-            already_played, board, agents_finished,
+            self, already_played, board, agents_finished,
             # Whether a specified action wins the board
             next_action_wins_board=lambda a, b: False,
             # Other parameters
@@ -96,15 +88,13 @@ class ModelBase(abc.ABC):
 
         # If player has already finished, pass
         if has_finished(self.hand):
-            return (StepState.step_completed, True,
-                    already_played, board, False)
+            return True, already_played, board, False
 
         # Possible actions; Pass if no possible play
         possible_actions = possible_next_moves(self.hand, board)
         if len(possible_actions) == 1 and \
                 np.all(possible_actions[0] == 0):
-            return (StepState.step_completed, False,
-                    already_played, board, False)
+            return False, already_played, board, False
 
         # Decide action to take
         (possible_qvalues, action_index, action_taken,
@@ -128,5 +118,5 @@ class ModelBase(abc.ABC):
 
         # Return next state
         self.hand = next_hand
-        return (StepState.step_completed, has_finished(self.hand),
-                next_already_played, next_board, best_decision_made_randomly)
+        return (has_finished(self.hand), next_already_played,
+                next_board, best_decision_made_randomly)
