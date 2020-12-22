@@ -58,12 +58,12 @@ class ModelBase(abc.ABC):
     def process_next_board_state(
             # Last board state
             self, already_played, board,
-            # Next board state
-            next_already_played, next_board, next_hand,
+            # Possible states before the next move of this agent
+            list_next_possible_states, next_ap, next_b, next_hand,
             # Decided action
             possible_qvalues, action_index, action_taken, random_choice,
             # Other parameters
-            agents_finished, next_action_wins_board, always_use_best):
+            agents_finished, always_use_best):
         """ Processes the next board state. """
 
         pass
@@ -71,14 +71,14 @@ class ModelBase(abc.ABC):
     def do_step(
             # Board state
             self, already_played, board, agents_finished,
-            # Whether a specified action wins the board
-            next_action_wins_board=lambda a, b: False,
+            # Possible states before the next move of this agent
+            list_next_possible_states=lambda ap, b: ([], []),
             # Other parameters
             always_use_best=False, print_luck=False):
         """
             Performs a (partial) step in the game.
 
-            Returns (Next step state, Player finished, 
+            Returns (Player finished, 
                 Already played cards, New board, 
                 Best decision made randomly)
         """
@@ -110,10 +110,10 @@ class ModelBase(abc.ABC):
 
         # Process next state
         self.process_next_board_state(
-            already_played, board,
-            next_already_played, next_board, next_hand,
-            possible_qvalues, action_index, action_taken, random_choice,
-            agents_finished, next_action_wins_board, always_use_best
+            already_played, board, list_next_possible_states,
+            next_already_played, next_board, next_hand, possible_qvalues,
+            action_index, action_taken, random_choice, agents_finished,
+            always_use_best
         )
 
         # Return next state

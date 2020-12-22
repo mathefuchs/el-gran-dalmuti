@@ -7,7 +7,7 @@ from egd.agent.base_agent import ModelBase
 from egd.config import use_small_nums
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import has_finished, NUM_PLAYERS
-from egd.game.moves import possible_next_moves
+from egd.game.moves import possible_next_moves, possible_next_moves_for_all
 
 
 class DeepQAgent(ModelBase):
@@ -116,12 +116,16 @@ class DeepQAgent(ModelBase):
             understood by the model. """
 
         stack_list = []
-        for action in actions:
+        for i, action in enumerate(actions):
             if action.shape[0] != NUM_CARD_VALUES:
                 raise Exception("Action has wrong shape.")
 
+            temp_already_played = already_played[0] \
+                if len(already_played) == 1 else already_played[i]
+            temp_board = board[0] if len(board) == 1 else board[i]
+
             stack_list.append(np.hstack([
-                already_played, board, hand, action
+                temp_already_played, temp_board, hand, action
             ]))
 
         return np.vstack(stack_list)
@@ -149,13 +153,10 @@ class DeepQAgent(ModelBase):
             dataset, steps_per_epoch=1, epochs=1, verbose=1
         )
 
-    def predict_q_values_from_network(
-            self, already_played, board, hand, actions):
+    def predict_q_values_from_network(self, data_to_predict):
         """ Predicts q-values from the trained neural net. """
 
-        return self.network.predict(
-            self.convert_to_data_batch(already_played, board, hand, actions)
-        ).flatten()
+        return self.network.predict(data_to_predict).flatten()
 
     def decide_action_to_take(
             self, already_played, board, always_use_best,
@@ -173,14 +174,14 @@ class DeepQAgent(ModelBase):
 
             # Get q-value estimate only for chosen action
             possible_qvalues = self.predict_q_values_from_network(
-                already_played, board, self.hand,
-                [action_taken]
+                self.convert_to_data_batch(
+                    [already_played], [board], self.hand, [action_taken])
             )[0]
         else:
             # Get predictions for all possible actions
             possible_qvalues = self.predict_q_values_from_network(
-                already_played, board, self.hand,
-                possible_actions  # Possible actions
+                self.convert_to_data_batch(
+                    [already_played], [board], self.hand, possible_actions)
             )
             close_to_max = np.isclose(possible_qvalues,
                                       np.nanmax(possible_qvalues))
@@ -202,27 +203,38 @@ class DeepQAgent(ModelBase):
     def process_next_board_state(
             # Last board state
             self, already_played, board,
-            # Next board state
-            next_already_played, next_board, next_hand,
+            # Possible states before the next move of this agent
+            list_next_possible_states, next_ap, next_b, next_hand,
             # Decided action
             possible_qvalues, action_index, action_taken, random_choice,
             # Other parameters
-            agents_finished, next_action_wins_board, always_use_best):
+            agents_finished, always_use_best):
         """ Processes the next board state. """
 
+        # List next possible states
+        next_already_played_list, next_boards = \
+            list_next_possible_states(next_ap, next_b)
+
         # Retrieve next state's max q-value
-        next_possible_actions = \
-            possible_next_moves(next_hand, next_board)
+        next_possible_actions, next_boards, next_already_played_list = \
+            possible_next_moves_for_all(
+                next_hand, next_boards, next_already_played_list)
+
         next_qvalues = self.predict_q_values_from_network(
-            next_already_played, next_board, next_hand,
-            next_possible_actions)
-        next_max = np.nanmax(next_qvalues)
+            self.convert_to_data_batch(
+                next_already_played_list, next_boards,
+                next_hand, next_possible_actions))
+        # FIXME compute weighted average based on the probabilites.
+        # Use mean since best action for agent is probably not going to happen
+        next_max = np.nanmean(next_qvalues)
 
         # Determine reward
         if has_finished(next_hand):
             # Reward based on how many other agents are already finished
             reward_earned = self.rewards[agents_finished]
-        elif next_action_wins_board(next_already_played, next_board):
+        elif np.all(np.all(
+            (next_already_played_list - next_possible_actions)
+                == already_played, axis=1)):
             # Cards that win a round safely gain fixed rewards
             reward_earned = self.reward_win_round
         else:
@@ -241,7 +253,7 @@ class DeepQAgent(ModelBase):
             # Record step in replay buffer
             self.replay_buffer.add_batch((
                 self.convert_to_data_batch(
-                    already_played, board, self.hand, [action_taken]
+                    [already_played], [board], self.hand, [action_taken]
                 ), new_qvalue))
 
             # Fit neural net to observed replays
@@ -254,5 +266,5 @@ class DeepQAgent(ModelBase):
         else:
             self.validation_buffer.add_batch((
                 self.convert_to_data_batch(
-                    already_played, board, self.hand, [action_taken]
+                    [already_played], [board], self.hand, [action_taken]
                 ), new_qvalue))

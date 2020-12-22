@@ -6,7 +6,7 @@ from egd.config import epochs_for_validation, validation_games
 from egd.evaluation import print_validation_results
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
-from egd.game.moves import possible_next_moves, only_passing_possible
+from egd.game.moves import possible_next_moves, possible_next_moves_for_all
 
 
 def play_single_game(agents, epoch, verbose, inference):
@@ -40,23 +40,22 @@ def play_single_game(agents, epoch, verbose, inference):
             (current_player_index + i) %
             NUM_PLAYERS] for i in range(1, NUM_PLAYERS)]
 
-        # Check whether action wins board
-        def next_action_wins_board(next_already_played, next_board):
-            next_player_index = 0
-            while next_player_index < NUM_PLAYERS - 1 and only_passing_possible(
-                    agents[next_players[next_player_index]].hand, next_board):
-                next_player_index += 1
+        # List possible states before the next action of the same agent
+        def states_before_next_action(ap, b):
+            next_aps = [ap]
+            next_bs = [b]
 
-            if next_player_index == NUM_PLAYERS - 1:
-                return True
-            else:
-                return False
+            for next_player in next_players:
+                _, next_bs, next_aps = possible_next_moves_for_all(
+                    agents[next_player].hand, next_bs, next_aps)
+
+            return next_aps, next_bs
 
         # Perform a move
         finished, new_already_played, new_board, best_dec_rand = \
             agents[current_player].do_step(
                 already_played, board, len(finished_players),
-                next_action_wins_board=next_action_wins_board,
+                list_next_possible_states=states_before_next_action,
                 always_use_best=inference, print_luck=verbose)
 
         # Amount of random decisions for evaluation

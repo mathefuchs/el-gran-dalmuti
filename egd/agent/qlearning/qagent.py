@@ -100,17 +100,18 @@ class QLearningAgent(ModelBase):
     def process_next_board_state(
             # Last board state
             self, already_played, board,
-            # Next board state
-            next_already_played, next_board, next_hand,
+            # Possible states before the next move of this agent
+            list_next_possible_states, next_ap, next_b, next_hand,
             # Decided action
             learned_values, action_index, action_taken, random_choice,
             # Other parameters
-            agents_finished, next_action_wins_board, always_use_best):
+            agents_finished, always_use_best):
         """ Processes the next board state. """
 
+        # FIXME agent does not perform two consecutive actions
         # Retrieve next state's q-value
         next_qvalues = self.qtable.get_qtable_entry(
-            next_already_played, next_board, next_hand)
+            next_ap, next_b, next_hand)
         next_max = np.nanmax(next_qvalues) \
             if np.any(next_qvalues != None) else 0
 

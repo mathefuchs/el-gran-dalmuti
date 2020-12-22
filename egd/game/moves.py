@@ -113,3 +113,21 @@ def possible_next_moves(hand, board):
         possible_actions = possible_actions[1:]
 
     return np.vstack(possible_actions)
+
+
+def possible_next_moves_for_all(hand, boards, already_played_list):
+    """ Get possible moves for all provided boards. """
+
+    new_boards = []
+    moves = []
+    new_already_played = []
+
+    for i, board in enumerate(boards):
+        next_actions = possible_next_moves(hand, board)
+        moves.append(next_actions.copy())
+        new_already_played.append(already_played_list[i] + next_actions)
+        next_actions[np.all(next_actions == 0, axis=1)] = board
+        new_boards.append(next_actions)
+
+    return (np.vstack(moves), np.vstack(new_boards),
+            np.vstack(new_already_played))
