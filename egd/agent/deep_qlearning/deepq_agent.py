@@ -16,6 +16,7 @@ class DeepQAgent(ModelBase):
         """ Initialize an agent. """
 
         super().__init__(playerIndex, debug=debug)
+        self.trainable = True
 
         # Whether to use small numbers for debugging reasons
         self.use_small_numbers = use_small_nums

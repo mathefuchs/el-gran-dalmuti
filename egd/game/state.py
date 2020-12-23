@@ -20,14 +20,15 @@ def has_finished(hand):
         return np.all(hand == 0, axis=1)
 
 
-def random_initial_cards():
+def random_initial_cards(cards_to_use=AVAILABLE_CARDS):
     """ Random initial state for the game. """
 
     deck = np.array([], dtype=np.int8)
 
     for card_type in range(NUM_CARD_VALUES):
         deck = np.append(deck, np.array(
-            [card_type for _ in range(AVAILABLE_CARDS[card_type])]))
+            [card_type for _ in range(cards_to_use[card_type])],
+            dtype=np.int8))
 
     np.random.shuffle(deck)
 

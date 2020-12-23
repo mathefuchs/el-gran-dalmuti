@@ -16,6 +16,7 @@ class ModelBase(abc.ABC):
     def __init__(self, playerIndex, debug=False):
         """ Initialize an agent. """
 
+        self.trainable = False  # Whether agent is trainable
         self.playerIndex = playerIndex
         self.debug = debug
 
