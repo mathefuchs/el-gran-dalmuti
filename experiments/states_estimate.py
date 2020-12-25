@@ -17,11 +17,11 @@ def num_state_action_comb():
     for i in range(NUM_CARD_VALUES):
         comb_ap *= (AVAILABLE_CARDS[i] + 1)
 
-    for _ in tqdm.tqdm(range(10000)):
+    for _ in tqdm.tqdm(range(100000)):
         # Already played can be anything
         ap = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
         for i in range(NUM_CARD_VALUES):
-            ap[i] = np.random.randint(1, AVAILABLE_CARDS[i] + 1)
+            ap[i] = np.random.randint(0, AVAILABLE_CARDS[i] + 1)
 
         # Board must be a move that is already included in already played
         comb_b = possible_next_moves(ap, empty).shape[0]
@@ -31,7 +31,8 @@ def num_state_action_comb():
         hands = random_initial_cards(cards_to_use=remaining)
         comb_actions = 1
         for hand in hands:
-            comb_actions *= possible_next_moves(hand, empty).shape[0]
+            comb_actions *= possible_next_moves(hand, empty).shape[0] \
+                if not np.all(hand == 0) else 1
 
         total_comb.append(comb_ap * comb_b * comb_actions)
 
