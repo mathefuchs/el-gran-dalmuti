@@ -12,6 +12,8 @@ $$Q: S \times A^{4} \\ Q(s, a_1, a_2, a_3, a_4)$$
 $$V(s) = \max_{\pi} \min_{a_3} \min_{a_2} \min_{a_1} \sum_{a_4} Q(s, a_1, a_2, a_3, a_4) \pi_{a_4} \\ Q(s, a_1, a_2, a_3, a_4) = R(s, a_1, a_2, a_3, a_4) + \gamma \sum_{s'} T(s, a_1, a_2, a_3, a_4, s') V(s')$$
     * Assume that agent 1, 2 and 3 perform worst possible actions ($\min_a$) for agent 4 (agent to train)
     * $T(s, a_1, a_2, a_3, a_4, s') = 1 \Leftrightarrow s'$ is the resulting state after doing actions $a_i$ (deterministic transitions)
-    * Deterministic policy. Take action with highest value estimate.
     * Q-value update rule is then simplified to
 $$V(s) = \max_{a_4} \min_{a_3} \min_{a_2} \min_{a_1} Q(s, a_1, a_2, a_3, a_4) \\ Q(s, a_1, a_2, a_3, a_4) = R(s, a_1, a_2, a_3, a_4) + \gamma V(s')$$
+
+* Boltzman policy. Sample action according to q-value estimate ($T$ randomness factor).
+$$P(a_4 | s_t, a_1, a_2, a_3) = \frac{\exp(Q(s, a_1, a_2, a_3, a_4) / T)}{\sum_{b \in A_4} \exp(Q(s, a_1, a_2, a_3, b) / T)}$$
