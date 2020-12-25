@@ -5,7 +5,7 @@ from tf_agents.specs import tensor_spec
 
 from egd.agent.base_agent import ModelBase
 from egd.config import use_small_nums
-from egd.game.cards import NUM_CARD_VALUES
+from egd.game.cards import NUM_CARD_VALUES, AVAILABLE_CARDS
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves, possible_next_moves_for_all
 
@@ -39,7 +39,7 @@ class DeepQAgent(ModelBase):
         self.replay_capacity = 128 if self.use_small_numbers else 1024
         self.train_each_n_steps = 5 if self.use_small_numbers else 50
         self.step_iteration = 0
-        self.model_data_spec = (
+        self.model_data_spec = (  # TODO adjust to new model
             tf.TensorSpec([4 * 13], tf.int8, "board_state"),
             tf.TensorSpec([1], tf.float32, "q_value"),
         )
@@ -61,6 +61,8 @@ class DeepQAgent(ModelBase):
 
     def _create_model(self):
         """ Create model for predicting q-values. """
+
+        # TODO adapt neural network to new model
 
         # Create sequential model
         self.network = tf.keras.Sequential()
@@ -116,6 +118,8 @@ class DeepQAgent(ModelBase):
         """ Converts the given arrays to a representation 
             understood by the model. """
 
+        # TODO scale inputs with AVAILABLE_CARDS
+        # to represent share of all cards
         stack_list = []
         for i, action in enumerate(actions):
             if action.shape[0] != NUM_CARD_VALUES:

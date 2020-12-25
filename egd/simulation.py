@@ -29,10 +29,16 @@ def play_single_game(agents, epoch, verbose, inference):
         print("                    1 2 3 4 5 6 7 8 9 . . . J")
         print("Initial board:   ", board)
 
-    # Game loop
+    # Global game variables
+    past_actions = np.zeros(
+        (NUM_PLAYERS, NUM_CARD_VALUES), dtype=np.int8)  # TODO
     finished_players = []
+
+    # Statistics to evaluate
     number_decisions = np.zeros(NUM_PLAYERS, dtype=np.int16)
     best_decisions_randomly = np.zeros(NUM_PLAYERS, dtype=np.int16)
+
+    # Game loop
     while len(finished_players) < NUM_PLAYERS:
         # Current player
         current_player = order_of_play[current_player_index]
