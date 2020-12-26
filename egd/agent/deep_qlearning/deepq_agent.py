@@ -7,7 +7,7 @@ from tf_agents.specs import tensor_spec
 from egd.config import use_small_nums
 from egd.agent.state import GameState, StepOptions
 from egd.agent.base_agent import ModelBase
-from egd.game.cards import NUM_CARD_VALUES, AVAILABLE_CARDS
+from egd.game.cards import NUM_CARD_VALUES, AVAILABLE_CARDS, EMPTY_HAND
 from egd.game.state import has_finished, NUM_PLAYERS
 from egd.game.moves import possible_next_moves
 
@@ -33,7 +33,7 @@ class DeepQAgent(ModelBase):
         # Hyperparameters
         self.alpha = 0.01  # learning rate
         self.gamma = 0.95  # favour future rewards
-        self.exploration_decay_rate = 1 / 2000
+        self.exploration_decay_rate = 1 / 20000
         self.reward_win_round = 0.005
         self.reward_per_card_played = 0.001
         self.rewards = {
@@ -106,9 +106,9 @@ class DeepQAgent(ModelBase):
 
         super().start_episode(initial_hand, state, num_episode)
 
-        # amount of random decisions
-        self.epsilon = 1 / np.sqrt(
-            num_episode * self.exploration_decay_rate + 1)
+        # Amount of random decisions; the larger, the more random
+        self.epsilon = max(0.001, 8.0 - num_episode *
+                           self.exploration_decay_rate)
 
     def save_model(self):
         """ Save the model to the specified path. """
@@ -210,7 +210,29 @@ class DeepQAgent(ModelBase):
 
         # Get predictions for all possible actions
         return self.predict_q_values_from_network(
-            self.follow_up_actions_batch(possible_actions))
+            self.follow_up_actions_batch(possible_actions)) / self.epsilon
+
+    def next_board_after_action(
+            self, steps_already_passed: int, prev_board: np.ndarray,
+            action_taken: np.ndarray) -> np.ndarray:
+        """ Next board after the given action.
+
+        Args:
+            steps_already_passed (int): Steps already passed before.
+            prev_board (np.ndarray): Previous board.
+            action_taken (np.ndarray): Action taken.
+
+        Returns:
+            np.ndarray: New board state.
+        """
+
+        if np.all(action_taken == 0):
+            if steps_already_passed == NUM_PLAYERS - 2:
+                return EMPTY_HAND
+            else:
+                return prev_board
+        else:
+            return action_taken
 
     def minimax_qvalue(
             self, next_ap: np.ndarray, next_board: np.ndarray,
@@ -228,10 +250,67 @@ class DeepQAgent(ModelBase):
             float: Minimax q-value of next state.
         """
 
-        # TODO
-        possible_next_moves()
+        # Gather all possible action combinations for the next turn
+        possible_comb = []
+        remaining_cards = AVAILABLE_CARDS - next_ap - next_hand
 
-        return 0.0
+        # Iterate over all possible agent 1 moves
+        a1_moves = possible_next_moves(remaining_cards, next_board)
+        for a1_move in a1_moves:
+            # State after possible move of agent 1
+            remaining_cards_a1 = remaining_cards - a1_move
+            steps_already_passed_a1 = self.state.turns_passed_without_move + \
+                (1 if np.all(a1_move == 0) else 0)
+            board_a1 = self.next_board_after_action(
+                steps_already_passed_a1, next_board, a1_move)
+
+            # Iterate over all possible agent 2 moves
+            a2_moves = possible_next_moves(remaining_cards_a1, board_a1)
+            for a2_move in a2_moves:
+                # State after possible move of agent 2
+                remaining_cards_a2 = remaining_cards_a1 - a2_move
+                steps_already_passed_a2 = steps_already_passed_a1 + \
+                    (1 if np.all(a2_move == 0) else 0)
+                board_a2 = self.next_board_after_action(
+                    steps_already_passed_a2, board_a1, a2_move)
+
+                # Iterate over all possible agent 3 moves
+                a3_moves = possible_next_moves(remaining_cards_a2, board_a2)
+                for a3_move in a3_moves:
+                    # State after possible move of agent 3
+                    steps_already_passed_a3 = steps_already_passed_a2 + \
+                        (1 if np.all(a3_move == 0) else 0)
+                    board_a3 = self.next_board_after_action(
+                        steps_already_passed_a3, board_a2, a3_move)
+
+                    # Iterate over all possible moves of this agent
+                    a4_moves = possible_next_moves(next_hand, board_a3)
+                    for a4_move in a4_moves:
+                        # Append possible action history
+                        possible_comb.append(np.hstack([
+                            next_ap / AVAILABLE_CARDS,
+                            next_board / AVAILABLE_CARDS,
+                            a1_move / AVAILABLE_CARDS,
+                            a2_move / AVAILABLE_CARDS,
+                            a3_move / AVAILABLE_CARDS,
+                            a4_move / AVAILABLE_CARDS
+                        ]))
+
+        # Predict q-value of all possible combinations
+        possible_comb = np.vstack(possible_comb)
+        predicted_qvalues = self.predict_q_values_from_network(possible_comb)
+
+        # Get minimum q-value for opponent actions
+        min_qvalue_opponents_index = np.argmin(predicted_qvalues)
+        min_qvalue_prefix = possible_comb[
+            min_qvalue_opponents_index, :(5 * NUM_CARD_VALUES)]
+
+        # Get maximum q-value for the minimal opponent actions
+        minimax_qvalue = predicted_qvalues[
+            possible_comb[:, :(5 * NUM_CARD_VALUES)] == min_qvalue_prefix][0]
+
+        # Return minimax value
+        return minimax_qvalue
 
     def process_next_board_state(
             self, next_ap: np.ndarray, next_board: np.ndarray,

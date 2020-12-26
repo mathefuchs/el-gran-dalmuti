@@ -120,6 +120,16 @@ class GameState:
         else:
             self.turns_passed_without_move = 0
 
+    def next_agent_passing_leads_to_reset(self) -> bool:
+        """ Whether passing of the next agent 
+        leads to the reset of the board.
+
+        Returns:
+            bool: Whether passing leads to reset.
+        """
+
+        return self.turns_passed_without_move == NUM_PLAYERS - 2
+
 
 class EvaluationStats:
 

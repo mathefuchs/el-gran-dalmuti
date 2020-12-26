@@ -3,6 +3,7 @@ import numpy as np
 from typing import List
 from scipy.special import softmax
 from egd.agent.state import GameState, StepOptions
+from egd.game.cards import EMPTY_HAND
 from egd.game.state import has_finished
 from egd.game.moves import possible_next_moves, only_passing
 
@@ -143,9 +144,14 @@ class ModelBase(abc.ABC):
 
         # Compute next state
         next_hand = self.hand - action_taken
-        next_board = self.state.curr_board \
-            if np.all(action_taken == 0) else action_taken
         next_ap = self.state.curr_ap + action_taken
+        if np.all(action_taken == 0):
+            if self.state.next_agent_passing_leads_to_reset():
+                next_board = EMPTY_HAND
+            else:
+                next_board = self.state.curr_board
+        else:
+            next_board = action_taken
 
         # Process next state
         self.process_next_board_state(
