@@ -37,6 +37,19 @@ class GameState:
 
         return self.order_of_play[self.current_player_index]
 
+    def next_player(self, offset: int) -> int:
+        """ Get next player in turn after offset steps.
+
+        Args:
+            offset (int): Offset of steps.
+
+        Returns:
+            int: Player in turn after offset steps
+        """
+
+        return self.order_of_play[
+            (self.current_player_index + offset) % NUM_PLAYERS]
+
     def report_action(self, action: np.ndarray):
         """ Appends action to past actions.
 

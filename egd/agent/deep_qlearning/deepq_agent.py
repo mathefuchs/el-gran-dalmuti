@@ -253,8 +253,15 @@ class DeepQAgent(ModelBase):
         possible_comb = []
         remaining_cards = AVAILABLE_CARDS - next_ap - next_hand
 
+        # Agents finished
+        a1_finished = self.state.agents_finished[self.state.next_player(1)]
+        a2_finished = self.state.agents_finished[self.state.next_player(2)]
+        a3_finished = self.state.agents_finished[self.state.next_player(3)]
+        a4_finished = self.state.agents_finished[self.state.next_player(4)]
+
         # Iterate over all possible agent 1 moves
-        a1_moves = possible_next_moves(remaining_cards, next_board)
+        a1_moves = possible_next_moves(remaining_cards, next_board) \
+            if not a1_finished else [EMPTY_HAND]
         for a1_move in a1_moves:
             # State after possible move of agent 1
             remaining_cards_a1 = remaining_cards - a1_move
@@ -265,7 +272,8 @@ class DeepQAgent(ModelBase):
             steps_already_passed_a1 %= (NUM_PLAYERS - 1)
 
             # Iterate over all possible agent 2 moves
-            a2_moves = possible_next_moves(remaining_cards_a1, board_a1)
+            a2_moves = possible_next_moves(remaining_cards_a1, board_a1) \
+                if not a2_finished else [EMPTY_HAND]
             for a2_move in a2_moves:
                 # State after possible move of agent 2
                 remaining_cards_a2 = remaining_cards_a1 - a2_move
@@ -276,7 +284,8 @@ class DeepQAgent(ModelBase):
                 steps_already_passed_a2 %= (NUM_PLAYERS - 1)
 
                 # Iterate over all possible agent 3 moves
-                a3_moves = possible_next_moves(remaining_cards_a2, board_a2)
+                a3_moves = possible_next_moves(remaining_cards_a2, board_a2) \
+                    if not a3_finished else [EMPTY_HAND]
                 for a3_move in a3_moves:
                     # State after possible move of agent 3
                     steps_already_passed_a3 = steps_already_passed_a2 + \
@@ -285,7 +294,8 @@ class DeepQAgent(ModelBase):
                         steps_already_passed_a3, board_a2, a3_move)
 
                     # Iterate over all possible moves of this agent
-                    a4_moves = possible_next_moves(next_hand, board_a3)
+                    a4_moves = possible_next_moves(next_hand, board_a3) \
+                        if not a4_finished else [EMPTY_HAND]
                     for a4_move in a4_moves:
                         # Append possible action history
                         possible_comb.append(np.hstack([
