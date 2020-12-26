@@ -158,6 +158,7 @@ class DeepQAgent(ModelBase):
 
         return np.vstack(stack_list)
 
+    @tf.autograph.experimental.do_not_convert
     def evaluate_inference_mode(self) -> List[float]:
         """ Evaluates q-value representation of 
         neural network in validation games.
@@ -166,24 +167,21 @@ class DeepQAgent(ModelBase):
             List[float]: Loss metrics of evaluation
         """
 
-        dataset = self.validation_buffer.get_next(
-            sample_batch_size=self.val_replay_capacity,
-            num_steps=1)
+        dataset = self.validation_buffer.as_dataset(
+            sample_batch_size=self.val_replay_capacity)
 
         return self.network.evaluate(
-            dataset, steps=1, verbose=1
-        )
+            dataset, steps=1, verbose=1)
 
+    @tf.autograph.experimental.do_not_convert
     def fit_values_to_network(self):
         """ Fits data from the replay buffer to the neural net. """
 
-        dataset = self.replay_buffer.get_next(
-            sample_batch_size=self.sample_batch,
-            num_steps=1)
+        dataset = self.replay_buffer.as_dataset(
+            sample_batch_size=self.sample_batch)
 
         self.network.fit(
-            dataset, steps_per_epoch=1, epochs=1, verbose=1
-        )
+            dataset, steps_per_epoch=1, epochs=1, verbose=1)
 
     def predict_q_values_from_network(
             self, data_to_predict: np.ndarray) -> np.ndarray:
@@ -227,7 +225,7 @@ class DeepQAgent(ModelBase):
         """
 
         if np.all(action_taken == 0):
-            if steps_already_passed == NUM_PLAYERS - 2:
+            if steps_already_passed == NUM_PLAYERS - 1:
                 return EMPTY_HAND
             else:
                 return prev_board
@@ -236,7 +234,8 @@ class DeepQAgent(ModelBase):
 
     def minimax_qvalue(
             self, next_ap: np.ndarray, next_board: np.ndarray,
-            next_hand: np.ndarray, action_taken: np.ndarray) -> float:
+            next_hand: np.ndarray, action_taken: np.ndarray,
+            next_turns_passed_without_move: int) -> float:
         """ Retrieve the next state's q-value 
         according to the minimax approach.
 
@@ -259,10 +258,11 @@ class DeepQAgent(ModelBase):
         for a1_move in a1_moves:
             # State after possible move of agent 1
             remaining_cards_a1 = remaining_cards - a1_move
-            steps_already_passed_a1 = self.state.turns_passed_without_move + \
+            steps_already_passed_a1 = next_turns_passed_without_move + \
                 (1 if np.all(a1_move == 0) else 0)
             board_a1 = self.next_board_after_action(
                 steps_already_passed_a1, next_board, a1_move)
+            steps_already_passed_a1 %= (NUM_PLAYERS - 1)
 
             # Iterate over all possible agent 2 moves
             a2_moves = possible_next_moves(remaining_cards_a1, board_a1)
@@ -273,6 +273,7 @@ class DeepQAgent(ModelBase):
                     (1 if np.all(a2_move == 0) else 0)
                 board_a2 = self.next_board_after_action(
                     steps_already_passed_a2, board_a1, a2_move)
+                steps_already_passed_a2 %= (NUM_PLAYERS - 1)
 
                 # Iterate over all possible agent 3 moves
                 a3_moves = possible_next_moves(remaining_cards_a2, board_a2)
@@ -306,8 +307,8 @@ class DeepQAgent(ModelBase):
             min_qvalue_opponents_index, :(5 * NUM_CARD_VALUES)]
 
         # Get maximum q-value for the minimal opponent actions
-        minimax_qvalue = predicted_qvalues[
-            possible_comb[:, :(5 * NUM_CARD_VALUES)] == min_qvalue_prefix][0]
+        minimax_qvalue = np.max(predicted_qvalues[np.all(
+            possible_comb[:, :(5 * NUM_CARD_VALUES)] == min_qvalue_prefix, axis=1)])
 
         # Return minimax value
         return minimax_qvalue
@@ -315,7 +316,7 @@ class DeepQAgent(ModelBase):
     def process_next_board_state(
             self, next_ap: np.ndarray, next_board: np.ndarray,
             next_hand: np.ndarray, action_taken: np.ndarray,
-            options: StepOptions):
+            next_turns_passed_without_move: int, options: StepOptions):
         """ Processes the next board state.
 
         Args:
@@ -323,6 +324,8 @@ class DeepQAgent(ModelBase):
             next_board (np.ndarray): Next board.
             next_hand (np.ndarray): Next hand.
             action_taken (np.ndarray): Taken action.
+            next_turns_passed_without_move (int): 
+            Turns past before next action.
             options (StepOptions): Options.
         """
 
@@ -330,7 +333,8 @@ class DeepQAgent(ModelBase):
         if not has_finished(next_hand):
             # Use minimax approach to get next state's q-value
             next_state_value = self.minimax_qvalue(
-                next_ap, next_board, next_hand, action_taken)
+                next_ap, next_board, next_hand, action_taken,
+                next_turns_passed_without_move)
 
         # Determine reward
         if has_finished(next_hand):
@@ -345,8 +349,6 @@ class DeepQAgent(ModelBase):
 
         # Determine new q-value and states
         next_qvalue = reward_earned + self.gamma * next_state_value
-        self.state.ap_start = next_ap
-        self.state.board_start = next_board
 
         # Do not train in inference mode
         if not options.inference_mode:

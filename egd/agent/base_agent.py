@@ -77,7 +77,7 @@ class ModelBase(abc.ABC):
     def process_next_board_state(
             self, next_ap: np.ndarray, next_board: np.ndarray,
             next_hand: np.ndarray, action_taken: np.ndarray,
-            options: StepOptions):
+            next_turns_passed_without_move: int, options: StepOptions):
         """ Processes the next board state.
 
         Args:
@@ -85,6 +85,8 @@ class ModelBase(abc.ABC):
             next_board (np.ndarray): Next board.
             next_hand (np.ndarray): Next hand.
             action_taken (np.ndarray): Taken action.
+            next_turns_passed_without_move (int): 
+            Turns past before next action.
             options (StepOptions): Options.
         """
 
@@ -97,7 +99,8 @@ class ModelBase(abc.ABC):
             options (StepOptions): Step options
 
         Returns:
-            bool: Decision made randomly
+            bool: Whether decision that should not
+            be made randomly was made randomly
         """
 
         # Prepares the step to do
@@ -106,7 +109,7 @@ class ModelBase(abc.ABC):
         # If player has already finished, pass
         if has_finished(self.hand):
             self.state.report_empty_action()
-            self.state.report_agent_finished()
+            self.state.report_agent_finished(self.playerIndex)
             return False
 
         # Possible actions; Pass if no possible play
@@ -122,7 +125,7 @@ class ModelBase(abc.ABC):
 
         # Sample action according to probabilities
         if self.trainable and not options.inference_mode:
-            decision_made_randomly = True
+            decision_made_randomly = False
             action_index = np.random.choice(
                 len(possible_actions), p=action_probabilities)
             action_taken = possible_actions[action_index]
@@ -134,7 +137,8 @@ class ModelBase(abc.ABC):
 
             # Log ties in inference mode decisions
             decision_made_randomly = np.count_nonzero(close_to_max) > 1
-            if options.print_tie_in_inference and decision_made_randomly:
+            if self.trainable and options.print_tie_in_inference \
+                    and decision_made_randomly:
                 print("Player", self.playerIndex,
                       "- Warning: Decision made randomly")
 
@@ -148,14 +152,19 @@ class ModelBase(abc.ABC):
         if np.all(action_taken == 0):
             if self.state.next_agent_passing_leads_to_reset():
                 next_board = EMPTY_HAND
+                next_turns_passed_without_move = 0
             else:
                 next_board = self.state.curr_board
+                next_turns_passed_without_move = \
+                    self.state.turns_passed_without_move + 1
         else:
+            next_turns_passed_without_move = 0
             next_board = action_taken
 
         # Process next state
         self.process_next_board_state(
-            next_ap, next_board, next_hand, action_taken, options)
+            next_ap, next_board, next_hand, action_taken,
+            next_turns_passed_without_move, options)
 
         # Update state
         self.hand = next_hand
@@ -170,7 +179,7 @@ class ModelBase(abc.ABC):
 
         # Report that agent finished if applicable
         if has_finished(self.hand):
-            self.state.report_agent_finished()
+            self.state.report_agent_finished(self.playerIndex)
 
         # Return whether decision was made randomly
         return decision_made_randomly

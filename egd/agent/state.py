@@ -1,6 +1,5 @@
 import numpy as np
 
-from egd.io_util import log_board_reset
 from egd.game.cards import NUM_CARD_VALUES, EMPTY_HAND
 from egd.game.state import NUM_PLAYERS, PLAYERS
 
@@ -99,11 +98,12 @@ class GameState:
         self.current_player_index = (
             self.current_player_index + 1) % NUM_PLAYERS
 
-    def check_all_passed(self, verbose=False):
+    def check_all_passed(self) -> bool:
         """ Reset board after a complete round of no moves.
 
-        Args:
-            verbose (bool, optional): Verbosity flag. Defaults to False.
+        Returns:
+            bool: Returns whether the board state has 
+            been reset due to agents passing.
         """
 
         if self.last_action_passing():
@@ -114,11 +114,11 @@ class GameState:
                 self.turns_passed_without_move = 0
                 self.board_start = EMPTY_HAND
                 self.curr_board = EMPTY_HAND
-
-                if verbose:
-                    log_board_reset(self)
+                return True
         else:
             self.turns_passed_without_move = 0
+
+        return False
 
     def next_agent_passing_leads_to_reset(self) -> bool:
         """ Whether passing of the next agent 

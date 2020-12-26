@@ -4,7 +4,9 @@ import tqdm
 from typing import List, Tuple
 
 from egd.config import epochs_for_validation, validation_games
-from egd.io_util import log_initial_board, log_player_move, log_player_ranks
+from egd.log_messages import (
+    log_initial_board, log_player_move,
+    log_player_ranks, log_board_reset)
 from egd.evaluation import print_validation_results
 from egd.agent.state import GameState, StepOptions, EvaluationStats
 from egd.agent.base_agent import ModelBase
@@ -54,7 +56,8 @@ def play_single_game(
             log_player_move(state)
 
         # Reset board after a complete round of no moves
-        state.check_all_passed(verbose)
+        if state.check_all_passed() and verbose:
+            log_board_reset(state)
 
         # Next turn
         state.next_turn()
