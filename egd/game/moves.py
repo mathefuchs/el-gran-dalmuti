@@ -80,8 +80,8 @@ def possible_next_moves(hand, board):
                             + get_cards_array(JOKER, 2)
                         )
 
-    # If board empty, passing not allowed
-    if np.all(board == 0):
+    # If board empty and other options available, passing not allowed
+    if np.all(board == 0) and len(possible_actions) > 1:
         possible_actions = possible_actions[1:]
 
     return np.vstack(possible_actions)
