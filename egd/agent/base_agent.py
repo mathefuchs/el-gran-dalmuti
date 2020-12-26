@@ -1,5 +1,6 @@
 import abc
 import numpy as np
+from typing import List
 from scipy.special import softmax
 from egd.agent.state import GameState, StepOptions
 from egd.game.state import has_finished
@@ -9,7 +10,7 @@ from egd.game.moves import possible_next_moves, only_passing
 class ModelBase(abc.ABC):
 
     def __init__(self, playerIndex: int, debug=False):
-        """ Initialize an agent
+        """ Initialize an agent.
 
         Args:
             playerIndex (int): Player's index
@@ -45,7 +46,7 @@ class ModelBase(abc.ABC):
         self.state = state
         self.num_episode = num_episode
 
-    def evaluate_inference_mode(self) -> list:
+    def evaluate_inference_mode(self) -> List[float]:
         """ Evaluates performance in validation games.
 
         Returns:
@@ -73,9 +74,18 @@ class ModelBase(abc.ABC):
         pass
 
     def process_next_board_state(
-            self, action_values: np.ndarray, action_probabilities: np.ndarray,
-            action_index: int, action_taken: np.ndarray, options: StepOptions):
-        """ Processes the next board state. """
+            self, next_ap: np.ndarray, next_board: np.ndarray,
+            next_hand: np.ndarray, action_taken: np.ndarray,
+            options: StepOptions):
+        """ Processes the next board state.
+
+        Args:
+            next_ap (np.ndarray): Next already played state.
+            next_board (np.ndarray): Next board.
+            next_hand (np.ndarray): Next hand.
+            action_taken (np.ndarray): Taken action.
+            options (StepOptions): Options.
+        """
 
         pass
 
@@ -139,8 +149,7 @@ class ModelBase(abc.ABC):
 
         # Process next state
         self.process_next_board_state(
-            action_values, action_probabilities,
-            action_index, action_taken, options)
+            next_ap, next_board, next_hand, action_taken, options)
 
         # Update state
         self.hand = next_hand

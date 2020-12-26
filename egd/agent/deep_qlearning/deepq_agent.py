@@ -1,19 +1,28 @@
 import numpy as np
 import tensorflow as tf
+from typing import List
 from tf_agents.replay_buffers import py_uniform_replay_buffer
 from tf_agents.specs import tensor_spec
 
-from egd.agent.base_agent import ModelBase
 from egd.config import use_small_nums
+from egd.agent.state import GameState, StepOptions
+from egd.agent.base_agent import ModelBase
 from egd.game.cards import NUM_CARD_VALUES, AVAILABLE_CARDS
 from egd.game.state import has_finished, NUM_PLAYERS
-from egd.game.moves import possible_next_moves, possible_next_moves_for_all
+from egd.game.moves import possible_next_moves
 
 
 class DeepQAgent(ModelBase):
 
-    def __init__(self, playerIndex, debug=False, create_model=True):
-        """ Initialize an agent. """
+    def __init__(self, playerIndex: int, debug=False, create_model=True):
+        """ Initialize an agent.
+
+        Args:
+            playerIndex (int): Player's index
+            debug (bool, optional): Debug flag. Defaults to False.
+            create_model (bool, optional): Whether to 
+            create model. Defaults to True.
+        """
 
         super().__init__(playerIndex, debug=debug)
         self.trainable = True
@@ -39,8 +48,8 @@ class DeepQAgent(ModelBase):
         self.replay_capacity = 128 if self.use_small_numbers else 1024
         self.train_each_n_steps = 5 if self.use_small_numbers else 50
         self.step_iteration = 0
-        self.model_data_spec = (  # TODO adjust to new model
-            tf.TensorSpec([4 * 13], tf.int8, "board_state"),
+        self.model_data_spec = (
+            tf.TensorSpec([6 * 13], tf.float32, "state_and_actions"),
             tf.TensorSpec([1], tf.float32, "q_value"),
         )
         self.replay_buffer = py_uniform_replay_buffer.PyUniformReplayBuffer(
@@ -57,25 +66,19 @@ class DeepQAgent(ModelBase):
 
         # Initialize model
         if create_model:
-            self._create_model()
+            self.create_model()
 
-    def _create_model(self):
+    def create_model(self):
         """ Create model for predicting q-values. """
-
-        # TODO adapt neural network to new model
 
         # Create sequential model
         self.network = tf.keras.Sequential()
 
         # Use simple fully-connected layers
         self.network.add(tf.keras.layers.Dense(
-            4 * 13,
-            activation=tf.keras.activations.relu
-        ))
+            6 * 13, activation=tf.keras.activations.relu))
         self.network.add(tf.keras.layers.Dense(
-            13,
-            activation=tf.keras.activations.relu
-        ))
+            13, activation=tf.keras.activations.relu))
 
         # Final dense layer for q-value
         self.network.add(tf.keras.layers.Dense(1))
@@ -90,10 +93,18 @@ class DeepQAgent(ModelBase):
             ]
         )
 
-    def start_episode(self, initial_hand, num_episode=0):
-        """ Initialize game with assigned initial hand. """
+    def start_episode(
+            self, initial_hand: np.ndarray,
+            state: GameState, num_episode=0):
+        """ Initialize game with assigned initial hand
 
-        super().start_episode(initial_hand, num_episode)
+        Args:
+            initial_hand (np.ndarray): Initial hand
+            state (GameState): Current game state
+            num_episode (int, optional): Num of epochs. Defaults to 0.
+        """
+
+        super().start_episode(initial_hand, state, num_episode)
 
         # amount of random decisions
         self.epsilon = 1 / np.sqrt(
@@ -114,54 +125,77 @@ class DeepQAgent(ModelBase):
         self.network = tf.keras.models.load_model(
             "./egd/saved_agents/deepq.h5")
 
-    def convert_to_data_batch(self, already_played, board, hand, actions):
-        """ Converts the given arrays to a representation 
-            understood by the model. """
+    def follow_up_actions_batch(self, actions: np.ndarray) -> np.ndarray:
+        """ Converts the given actions to a representation 
+        understood by the model.
 
-        # TODO scale inputs with AVAILABLE_CARDS
-        # to represent share of all cards
+        Args:
+            actions (np.ndarray): The possible actions of
+            this agent to compute q-values for.
+
+        Raises:
+            Exception: If actions has the wrong shape.
+
+        Returns:
+            np.ndarray: Data batch to feed to the neural network.
+        """
+
         stack_list = []
-        for i, action in enumerate(actions):
+        for action in actions:
             if action.shape[0] != NUM_CARD_VALUES:
                 raise Exception("Action has wrong shape.")
 
-            temp_already_played = already_played[0] \
-                if len(already_played) == 1 else already_played[i]
-            temp_board = board[0] if len(board) == 1 else board[i]
-
+            # Scale inputs with AVAILABLE_CARDS
+            # to represent share of all cards
             stack_list.append(np.hstack([
-                temp_already_played, temp_board, hand, action
+                self.state.ap_start / AVAILABLE_CARDS,
+                self.state.board_start / AVAILABLE_CARDS,
+                self.state.past_actions[-3] / AVAILABLE_CARDS,
+                self.state.past_actions[-2] / AVAILABLE_CARDS,
+                self.state.past_actions[-1] / AVAILABLE_CARDS,
+                action / AVAILABLE_CARDS
             ]))
 
         return np.vstack(stack_list)
 
-    @tf.autograph.experimental.do_not_convert
-    def evaluate_inference_mode(self):
+    def evaluate_inference_mode(self) -> List[float]:
         """ Evaluates q-value representation of 
-            neural network in validation games. """
+        neural network in validation games.
 
-        dataset = self.validation_buffer.as_dataset(
-            sample_batch_size=self.val_replay_capacity)
+        Returns:
+            List[float]: Loss metrics of evaluation
+        """
+
+        dataset = self.validation_buffer.get_next(
+            sample_batch_size=self.val_replay_capacity,
+            num_steps=1)
 
         return self.network.evaluate(
             dataset, steps=1, verbose=1
         )
 
-    @tf.autograph.experimental.do_not_convert
     def fit_values_to_network(self):
         """ Fits data from the replay buffer to the neural net. """
 
-        dataset = self.replay_buffer.as_dataset(
-            sample_batch_size=self.sample_batch)
+        dataset = self.replay_buffer.get_next(
+            sample_batch_size=self.sample_batch,
+            num_steps=1)
 
         self.network.fit(
             dataset, steps_per_epoch=1, epochs=1, verbose=1
         )
 
-    def predict_q_values_from_network(self, data_to_predict):
-        """ Predicts q-values from the trained neural net. """
+    def predict_q_values_from_network(
+            self, data_to_predict: np.ndarray) -> np.ndarray:
+        """ Predicts q-values from the trained neural net.
 
-        # Scale predictions from [0, 1] to [-1, 1]
+        Args:
+            data_to_predict (np.ndarray): Data batch to predict.
+
+        Returns:
+            np.ndarray: The predictions.
+        """
+
         return self.network.predict(data_to_predict).flatten()
 
     def get_action_values(self, possible_actions: np.ndarray) -> np.ndarray:
@@ -174,95 +208,80 @@ class DeepQAgent(ModelBase):
             np.ndarray: Values for all provided actions
         """
 
-        # TODO
         # Get predictions for all possible actions
         return self.predict_q_values_from_network(
-            self.convert_to_data_batch(
-                [self.state.curr_ap], [board], self.hand, possible_actions)
-        )
+            self.follow_up_actions_batch(possible_actions))
+
+    def minimax_qvalue(
+            self, next_ap: np.ndarray, next_board: np.ndarray,
+            next_hand: np.ndarray, action_taken: np.ndarray) -> float:
+        """ Retrieve the next state's q-value 
+        according to the minimax approach.
+
+        Args:
+            next_ap (np.ndarray): Next already played.
+            next_board (np.ndarray): Next board.
+            next_hand (np.ndarray): Next hand.
+            action_taken (np.ndarray): Last action taken.
+
+        Returns:
+            float: Minimax q-value of next state.
+        """
+
+        # TODO
+        possible_next_moves()
+
+        return 0.0
 
     def process_next_board_state(
-            # Last board state
-            self, already_played, board,
-            # Possible states before the next move of this agent
-            list_next_possible_states, next_ap, next_b, next_hand,
-            # Decided action
-            possible_qvalues, action_index, action_taken, random_choice,
-            # Other parameters
-            agents_finished, always_use_best):
-        """ Processes the next board state. """
+            self, next_ap: np.ndarray, next_board: np.ndarray,
+            next_hand: np.ndarray, action_taken: np.ndarray,
+            options: StepOptions):
+        """ Processes the next board state.
 
-
+        Args:
+            next_ap (np.ndarray): Next already played state.
+            next_board (np.ndarray): Next board.
+            next_hand (np.ndarray): Next hand.
+            action_taken (np.ndarray): Taken action.
+            options (StepOptions): Options.
         """
 
-        new_boards = []
-        moves = []
-        new_already_played = []
-
-        for i, board in enumerate(boards):
-            next_actions = possible_next_moves(hand, board)
-            moves.append(next_actions.copy())
-            new_already_played.append(already_played_list[i] + next_actions)
-            next_actions[np.all(next_actions == 0, axis=1)] = board
-            new_boards.append(next_actions)
-
-        """
-        
-
+        # Terminal states have fixed q-values
         if not has_finished(next_hand):
-            # List next possible states
-            next_already_played_list, next_boards = \
-                list_next_possible_states(next_ap, next_b)
-
-            # Retrieve next state's max q-value
-            next_possible_actions, next_boards, next_already_played_list = \
-                possible_next_moves_for_all(
-                    next_hand, next_boards, next_already_played_list)
-
-            next_qvalues = self.predict_q_values_from_network(
-                self.convert_to_data_batch(
-                    next_already_played_list, next_boards,
-                    next_hand, next_possible_actions))
-            # FIXME compute weighted average based on the probabilites.
-            # Use mean since best action for agent is probably not going to happen
-            next_max = np.nanmean(next_qvalues)
+            # Use minimax approach to get next state's q-value
+            next_state_value = self.minimax_qvalue(
+                next_ap, next_board, next_hand, action_taken)
 
         # Determine reward
         if has_finished(next_hand):
             # Reward based on how many other agents are already finished
-            reward_earned = self.rewards[agents_finished]
+            reward_earned = self.rewards[self.state.get_num_agents_finished()]
             # Terminal state has q-value zero
-            next_max = 0
-        elif np.all(np.all(
-            (next_already_played_list - next_possible_actions)
-                == already_played, axis=1)):
-            # Cards that win a round safely gain fixed rewards
-            reward_earned = self.reward_win_round
+            next_state_value = 0
         else:
             # Else, the more cards played the better
             reward_earned = self.reward_per_card_played * \
                 np.linalg.norm(action_taken, 1)
 
-        # Determine new q-value
-        future_qvalue = reward_earned + self.gamma * next_max
+        # Determine new q-value and states
+        next_qvalue = reward_earned + self.gamma * next_state_value
+        self.state.ap_start = next_ap
+        self.state.board_start = next_board
 
         # Do not train in inference mode
-        if not always_use_best:
+        if not options.inference_mode:
             # Record step in replay buffer
             self.replay_buffer.add_batch((
-                self.convert_to_data_batch(
-                    [already_played], [board], self.hand, [action_taken]
-                ), future_qvalue))
+                self.follow_up_actions_batch([action_taken]), next_qvalue))
 
             # Fit neural net to observed replays
-            if self.step_iteration != 0 and self.step_iteration % \
-                    self.train_each_n_steps == 0:
+            if (self.step_iteration != 0 and
+                    self.step_iteration % self.train_each_n_steps == 0):
                 self.fit_values_to_network()
             self.step_iteration += 1
 
         # Validate q-values in inference mode
         else:
             self.validation_buffer.add_batch((
-                self.convert_to_data_batch(
-                    [already_played], [board], self.hand, [action_taken]
-                ), future_qvalue))
+                self.follow_up_actions_batch([action_taken]), next_qvalue))
