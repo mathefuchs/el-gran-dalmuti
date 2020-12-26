@@ -1,120 +1,76 @@
 import numpy as np
 import pandas as pd
 import tqdm
+from typing import List, Tuple
 
 from egd.config import epochs_for_validation, validation_games
+from egd.io_util import log_initial_board, log_player_move, log_player_ranks
 from egd.evaluation import print_validation_results
-from egd.game.cards import NUM_CARD_VALUES
-from egd.game.state import NUM_PLAYERS, PLAYERS, random_initial_cards
-from egd.game.moves import possible_next_moves, possible_next_moves_for_all
+from egd.agent.state import GameState, StepOptions, EvaluationStats
+from egd.agent.base_agent import ModelBase
+from egd.game.state import random_initial_cards
 
 
-def play_single_game(agents, epoch, verbose, inference):
-    """ Play a single round of the game. """
+def play_single_game(
+        agents: List[ModelBase], epoch: int,
+        verbose: bool, inference: bool) -> Tuple[List[int], np.ndarray]:
+    """ Play a single round of the game.
+
+    Args:
+        agents (List[ModelBase]): Agents in the game.
+        epoch (int): The current training epoch.
+        verbose (bool): Verbosity flag.
+        inference (bool): Whether to not train any agent.
+
+    Returns:
+        Tuple[List[int], np.ndarray]: Tuple of agent's 
+        rankings and amount of random decisions
+    """
+
+    # Global game variables
+    state = GameState()
+    eval_stats = EvaluationStats()
+    options = StepOptions(verbose, inference)
 
     # Generate and assign initial cards
     initial_cards = random_initial_cards()
     for playerIndex, agent in enumerate(agents):
-        agent.start_episode(initial_cards[playerIndex], epoch)
-
-    # Random first player and order of play
-    order_of_play = np.random.permutation(PLAYERS)
-    current_player_index = np.random.randint(NUM_PLAYERS)
-    already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-    board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-    turns_passed_without_move = 0
+        agent.start_episode(initial_cards[playerIndex], state, epoch)
 
     # Print intial board
     if verbose:
-        print("                    1 2 3 4 5 6 7 8 9 . . . J")
-        print("Initial board:   ", board)
-
-    # Global game variables
-    past_actions = np.zeros(
-        (NUM_PLAYERS, NUM_CARD_VALUES), dtype=np.int8)  # TODO
-    finished_players = []
-
-    # Statistics to evaluate
-    number_decisions = np.zeros(NUM_PLAYERS, dtype=np.int16)
-    best_decisions_randomly = np.zeros(NUM_PLAYERS, dtype=np.int16)
+        log_initial_board(state)
 
     # Game loop
-    while len(finished_players) < NUM_PLAYERS:
-        # Current player
-        current_player = order_of_play[current_player_index]
-        next_players = [order_of_play[
-            (current_player_index + i) %
-            NUM_PLAYERS] for i in range(1, NUM_PLAYERS)]
-
-        # List possible states before the next action of the same agent
-        def states_before_next_action(ap, b):
-            next_aps = [ap]
-            next_bs = [b]
-
-            # FIXME data leakage, hand of other players should be secret
-            for next_player in next_players:
-                _, next_bs, next_aps = possible_next_moves_for_all(
-                    agents[next_player].hand, next_bs, next_aps)
-
-            return next_aps, next_bs
-
+    while not state.all_agents_finished():
         # Perform a move
-        finished, new_already_played, new_board, best_dec_rand = \
-            agents[current_player].do_step(
-                already_played, board, len(finished_players),
-                list_next_possible_states=states_before_next_action,
-                always_use_best=inference, print_luck=verbose)
+        decision_random = agents[state.current_player()].do_step(options)
 
         # Amount of random decisions for evaluation
-        number_decisions[current_player] += 1
-        best_decisions_randomly[current_player] += 1 \
-            if best_dec_rand else 0
-
-        # Keep track of finished agents
-        if finished and current_player not in finished_players:
-            finished_players.append(current_player)
+        eval_stats.log_random_decision(state.current_player(), decision_random)
 
         # Print move
         if verbose:
-            if finished:
-                print("Player", current_player,
-                      "- Board:", new_board, "- Finished")
-            elif np.all(new_already_played == already_played):
-                print("Player", current_player,
-                      "- Board:", new_board, "- Passed")
-            else:
-                print("Player", current_player,
-                      "- Board:", new_board)
+            log_player_move(state)
 
         # Reset board after a complete round of no moves
-        if np.all(new_already_played == already_played):
-            turns_passed_without_move += 1
-
-            if turns_passed_without_move == NUM_PLAYERS - 1:
-                turns_passed_without_move = 0
-                new_board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
-
-                if verbose:
-                    print("                   1 2 3 4 5 6 7 8 9 . . . J")
-                    print("New board:       ", new_board)
-        else:
-            turns_passed_without_move = 0
+        state.check_all_passed(verbose)
 
         # Next turn
-        current_player_index = (current_player_index + 1) % NUM_PLAYERS
-        already_played = new_already_played
-        board = new_board
+        state.next_turn()
 
     # Game finished
     if verbose:
-        print("Game finished - Player's Ranks", finished_players)
+        log_player_ranks(state)
 
     # Return ranking of game
-    return finished_players, best_decisions_randomly / number_decisions
+    return state.agent_ranking, eval_stats.get_amount_of_random_decisions()
 
 
-def do_simulation(agents, agent_strings, num_epochs,
-                  verbose, save_model, inference):
+# TODO refactor
+def do_simulation(
+        agents: List[ModelBase], agent_strings: List[str], num_epochs: int,
+        verbose: bool, save_model: bool, inference: bool):
     """ Simulates a given number of games. """
 
     # Stats containing epoch, agent index, agent name, mean rank,
