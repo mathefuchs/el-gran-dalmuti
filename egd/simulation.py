@@ -5,7 +5,7 @@ import tqdm
 from egd.config import epochs_for_validation, validation_games
 from egd.evaluation import print_validation_results
 from egd.game.cards import NUM_CARD_VALUES
-from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
+from egd.game.state import NUM_PLAYERS, PLAYERS, random_initial_cards
 from egd.game.moves import possible_next_moves, possible_next_moves_for_all
 
 
@@ -18,7 +18,7 @@ def play_single_game(agents, epoch, verbose, inference):
         agent.start_episode(initial_cards[playerIndex], epoch)
 
     # Random first player and order of play
-    order_of_play = np.random.permutation(PLAYER)
+    order_of_play = np.random.permutation(PLAYERS)
     current_player_index = np.random.randint(NUM_PLAYERS)
     already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
     board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)

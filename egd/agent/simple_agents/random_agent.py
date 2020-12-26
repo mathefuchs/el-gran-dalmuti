@@ -5,14 +5,15 @@ from egd.agent.base_agent import ModelBase
 
 class RandomAgent(ModelBase):
 
-    def decide_action_to_take(
-            self, already_played, board, always_use_best,
-            print_luck, possible_actions):
-        """ Returns (possible_qvalues, action_index, action_taken, 
-            random_choice, best_decision_made_randomly) """
+    def get_action_values(self, possible_actions: np.ndarray) -> np.ndarray:
+        """ Retrieves the values for all provided actions.
 
-        # Decide randomly
-        action_index = np.random.randint(len(possible_actions))
-        action_taken = possible_actions[action_index]
+        Args:
+            possible_actions (np.ndarray): Possible actions
 
-        return (None, action_index, action_taken, True, True)
+        Returns:
+            np.ndarray: Values for all provided actions
+        """
+
+        # Return zero vector to decide randomly
+        return np.zeros(possible_actions.shape[0], dtype=np.int8)

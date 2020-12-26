@@ -17,19 +17,24 @@ class HumanAgent(ModelBase):
         print("                   1 2 3 4 5 6 7 8 9 . . . J")
         print("Your hand:       ", self.hand)
 
-    def decide_action_to_take(
-            self, already_played, board, always_use_best,
-            print_luck, possible_actions):
-        """ Returns (possible_qvalues, action_index, action_taken, 
-            random_choice, best_decision_made_randomly) """
+    def get_action_values(self, possible_actions: np.ndarray) -> np.ndarray:
+        """ Retrieves the values for all provided actions.
 
+        Args:
+            possible_actions (np.ndarray): Possible actions
+
+        Returns:
+            np.ndarray: Values for all provided actions
+        """
+
+        # TODO Refactor method
         # Ask for action
         while True:
             cmd = input(
                 "Enter your move (<card_type> <num_cards> [<num_jokers>]; or 'pass'): ")
 
             if cmd == "pass":
-                if not np.all(board == 0):
+                if not np.all(self.state.curr_board == 0):
                     action_index = 0
                     break
                 else:
@@ -60,7 +65,7 @@ class HumanAgent(ModelBase):
                 continue
 
             if np.any(np.all(card_array_to_play == possible_actions, axis=1)) \
-                    and not np.all(card_array_to_play == board):
+                    and not np.all(card_array_to_play == self.state.curr_board):
                 action_index = np.where(np.all(
                     card_array_to_play == possible_actions, axis=1))[0][0]
                 break
@@ -68,4 +73,7 @@ class HumanAgent(ModelBase):
                 print("Invalid move.")
                 continue
 
-        return (None, action_index, possible_actions[action_index], False, False)
+        # Return unit vector with choice
+        action_values = np.zeros(possible_actions.shape[0], dtype=np.int8)
+        action_values[action_index] = 1
+        return action_values
