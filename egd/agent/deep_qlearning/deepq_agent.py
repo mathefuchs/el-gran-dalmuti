@@ -75,23 +75,14 @@ class DeepQAgent(ModelBase):
         self.network = tf.keras.Sequential()
 
         # Use simple fully-connected layers
-        self.network.add(tf.keras.layers.Dense(
-            6 * 13, activation=tf.keras.activations.relu))
-        self.network.add(tf.keras.layers.Dense(
-            13, activation=tf.keras.activations.relu))
+        self.network.add(tf.keras.layers.Dense(6 * 13, activation="relu"))
+        self.network.add(tf.keras.layers.Dense(13, activation="relu"))
 
         # Final dense layer for q-value
         self.network.add(tf.keras.layers.Dense(1))
 
         # Compile neural network, use mean-squared error
-        self.network.compile(
-            loss=tf.keras.losses.MeanSquaredError(),
-            optimizer=tf.keras.optimizers.SGD(learning_rate=self.alpha),
-            metrics=[
-                tf.keras.losses.Huber(),
-                tf.keras.losses.MeanSquaredError(),
-            ]
-        )
+        self.network.compile(loss="mse", optimizer="RMSprop", metrics=["mse"])
 
     def start_episode(
             self, initial_hand: np.ndarray,

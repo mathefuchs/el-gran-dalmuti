@@ -111,7 +111,7 @@ def do_simulation(
             # Evaluate agent's q-value representation
             for i, agent in enumerate(agents):
                 metrics = agent.evaluate_inference_mode()
-                agent_stats[i].extend(metrics[1:] if metrics else [0.0, 0.0])
+                agent_stats[i].append(metrics[1] if metrics else 0.0)
 
             # Append test stats
             simulation_stats.extend(agent_stats)
@@ -127,7 +127,7 @@ def do_simulation(
             simulation_stats, columns=[
                 "epoch", "agent", "agent_name",
                 "mean_rank", "mean_rand_decisions",
-                "huber_loss_q_val_approx", "mse_loss_q_val_approx"
+                "mse_loss_q_val_approx"
             ])
         stats_df.to_csv(
             "./egd/saved_agents/training_deepq_stats.csv",
