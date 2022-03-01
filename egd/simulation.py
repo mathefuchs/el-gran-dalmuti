@@ -24,7 +24,7 @@ def play_single_game(agents, epoch, verbose, inference):
     board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
     turns_passed_without_move = 0
 
-    # Print intial board
+    # Print initial board
     if verbose:
         print("                    1 2 3 4 5 6 7 8 9 . . . J")
         print("Initial board:   ", board)
