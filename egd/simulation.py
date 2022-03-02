@@ -126,7 +126,9 @@ def play_single_game(
 
     # Record game ranking
     if save_histories:
-        game_records.set_game_ranking(epoch, finished_players)
+        game_records.set_game_ranking(finished_players)
+        if (epoch + 1) % 10000 == 0:
+            game_records.export_log_to_file(epoch)
 
     # Return ranking of game
     return finished_players, best_decisions_randomly / number_decisions
@@ -184,10 +186,6 @@ def do_simulation(
             if save_model:
                 for agent in agents:
                     agent.save_model()
-
-    # Save game records
-    if save_histories:
-        game_records.export_log_to_file()
 
     if save_model:
         # Save training stats
