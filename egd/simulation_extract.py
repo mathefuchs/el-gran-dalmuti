@@ -34,7 +34,7 @@ class GameExtractor:
         self.last_insert_idx = len(self.game_states)
 
     def export_log_to_file(
-        self, game_index: int, file_path: str = "./egd/logs/egd_games"
+        self, game_index: int, process_idx_offset: int = 0, file_path: str = "./egd/logs/egd_games"
     ) -> None:
         game_df = pd.DataFrame.from_records(self.game_states, columns=[
             "gid", "pid", "rank",
@@ -42,7 +42,7 @@ class GameExtractor:
             "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b11", "b12", "b13",
             "h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9", "h10", "h11", "h12", "h13",
         ])
-        idx = (game_index + 1) // 10000
+        idx = (game_index + 1) // 10000 + process_idx_offset
         game_df.to_parquet(file_path + "_" + str(idx) + ".parquet", index=None)
 
         self.game_states: List[np.ndarray] = []

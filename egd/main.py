@@ -48,6 +48,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--savehistories", default=0, type=int, nargs="?",
         metavar="Whether to save game histories.")
+    parser.add_argument(
+        "--process_idx_offset", default=0, type=int, nargs="?",
+        metavar="File numbering offset for different processes.")
     args = parser.parse_args()
 
     # Parse agents
@@ -62,5 +65,8 @@ if __name__ == "__main__":
     # Start simulation
     with tf.device(args.device):
         sim_call = do_simulation if args.parallel == 0 else do_par_simulation
-        sim_call(agents, agent_strings, args.games, (args.verbose == 1),
-                 (args.savemodel == 1), (args.inference == 1), (args.savehistories == 1))
+        sim_call(
+            agents, agent_strings, args.games, (args.verbose == 1),
+            (args.savemodel == 1), (args.inference == 1),
+            (args.savehistories == 1), args.process_idx_offset
+        )

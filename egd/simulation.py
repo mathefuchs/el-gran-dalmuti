@@ -15,7 +15,7 @@ from egd.simulation_extract import GameExtractor
 
 def play_single_game(
     agents: List[ModelBase], epoch: int, verbose: bool, inference: bool,
-    game_records: GameExtractor, save_histories: bool
+    game_records: GameExtractor, save_histories: bool, process_idx_offset: int
 ) -> Tuple[List[int], float]:
     """ Play a single round of the game. """
 
@@ -128,7 +128,7 @@ def play_single_game(
     if save_histories:
         game_records.set_game_ranking(finished_players)
         if (epoch + 1) % 10000 == 0:
-            game_records.export_log_to_file(epoch)
+            game_records.export_log_to_file(epoch, process_idx_offset)
 
     # Return ranking of game
     return finished_players, best_decisions_randomly / number_decisions
@@ -136,7 +136,8 @@ def play_single_game(
 
 def do_simulation(
     agents: List[ModelBase], agent_strings: List[str], num_epochs: int,
-    verbose: bool, save_model: bool, inference: bool, save_histories: bool
+    verbose: bool, save_model: bool, inference: bool, save_histories: bool,
+    process_idx_offset: int
 ):
     """ Simulates a given number of games. """
 
@@ -148,10 +149,10 @@ def do_simulation(
     for epoch in tqdm.tqdm(range(num_epochs)):
         # Play single game
         play_single_game(agents, epoch, verbose, inference,
-                         game_records, save_histories)
+                         game_records, save_histories, process_idx_offset)
 
         # Validate progress each x games
-        if epoch != 0 and epoch % epochs_for_validation == 0:
+        if not save_histories and epoch != 0 and epoch % epochs_for_validation == 0:
             # Play x games with best decisions
             if verbose:
                 print()
@@ -167,7 +168,7 @@ def do_simulation(
             rand_amounts = []
             for _ in tqdm.tqdm(range(validation_games)):
                 ranking, rand_amount = play_single_game(
-                    agents, 0, False, True, None, False)
+                    agents, 0, False, True, None, False, 0)
                 rankings.append(ranking)
                 rand_amounts.append(rand_amount)
             print_validation_results(
