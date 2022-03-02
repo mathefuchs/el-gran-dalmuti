@@ -1,3 +1,6 @@
+# Exclude game data because of size
+egd/logs/
+
 # vscode
 .vscode/settings.json
 
