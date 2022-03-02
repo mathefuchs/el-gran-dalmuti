@@ -70,5 +70,5 @@ class QLearningAgentTest(unittest.TestCase):
         self.assertTrue(np.all(agent.hand == hand))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

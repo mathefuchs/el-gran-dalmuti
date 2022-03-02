@@ -77,5 +77,5 @@ class QTableTest(unittest.TestCase):
             self.already_played, self.board, self.hand))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

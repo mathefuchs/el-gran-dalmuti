@@ -34,5 +34,5 @@ class StateTest(unittest.TestCase):
                                == (cards_per_player * np.ones(NUM_PLAYERS))))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -69,5 +69,5 @@ class DeepQAgentTest(unittest.TestCase):
         self.assertGreater(pred_q_value, -1.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

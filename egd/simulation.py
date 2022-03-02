@@ -1,15 +1,22 @@
+from typing import List, Tuple
+
 import numpy as np
 import pandas as pd
 import tqdm
 
+from egd.agent.base_agent import ModelBase
 from egd.config import epochs_for_validation, validation_games
 from egd.evaluation import print_validation_results
 from egd.game.cards import NUM_CARD_VALUES
 from egd.game.state import NUM_PLAYERS, PLAYER, random_initial_cards
-from egd.game.moves import possible_next_moves, possible_next_moves_for_all
+from egd.game.moves import possible_next_moves_for_all
+from egd.simulation_extract import GameExtractor
 
 
-def play_single_game(agents, epoch, verbose, inference):
+def play_single_game(
+    agents: List[ModelBase], epoch: int, verbose: bool, inference: bool,
+    game_records: GameExtractor, save_histories: bool
+) -> Tuple[List[int], float]:
     """ Play a single round of the game. """
 
     # Generate and assign initial cards
@@ -20,6 +27,7 @@ def play_single_game(agents, epoch, verbose, inference):
     # Random first player and order of play
     order_of_play = np.random.permutation(PLAYER)
     current_player_index = np.random.randint(NUM_PLAYERS)
+    current_player = order_of_play[current_player_index]
     already_played = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
     board = np.zeros(NUM_CARD_VALUES, dtype=np.int8)
     turns_passed_without_move = 0
@@ -70,6 +78,13 @@ def play_single_game(agents, epoch, verbose, inference):
         best_decisions_randomly[current_player] += 1 \
             if best_dec_rand else 0
 
+        # Record first game state
+        if save_histories and current_player not in finished_players:
+            game_records.record_state(
+                epoch, current_player, new_already_played,
+                new_board, agents[current_player].hand
+            )
+
         # Keep track of finished agents
         if finished and current_player not in finished_players:
             finished_players.append(current_player)
@@ -109,21 +124,29 @@ def play_single_game(agents, epoch, verbose, inference):
     if verbose:
         print("Game finished - Player's Ranks", finished_players)
 
+    # Record game ranking
+    if save_histories:
+        game_records.set_game_ranking(epoch, finished_players)
+
     # Return ranking of game
     return finished_players, best_decisions_randomly / number_decisions
 
 
-def do_simulation(agents, agent_strings, num_epochs,
-                  verbose, save_model, inference):
+def do_simulation(
+    agents: List[ModelBase], agent_strings: List[str], num_epochs: int,
+    verbose: bool, save_model: bool, inference: bool, save_histories: bool
+):
     """ Simulates a given number of games. """
 
     # Stats containing epoch, agent index, agent name, mean rank,
     # mean amount of random decisions, quality of q-value approximation
     simulation_stats = []
+    game_records = GameExtractor()
 
     for epoch in tqdm.tqdm(range(num_epochs)):
         # Play single game
-        play_single_game(agents, epoch, verbose, inference)
+        play_single_game(agents, epoch, verbose, inference,
+                         game_records, save_histories)
 
         # Validate progress each x games
         if epoch != 0 and epoch % epochs_for_validation == 0:
@@ -142,7 +165,7 @@ def do_simulation(agents, agent_strings, num_epochs,
             rand_amounts = []
             for _ in tqdm.tqdm(range(validation_games)):
                 ranking, rand_amount = play_single_game(
-                    agents, 0, False, True)
+                    agents, 0, False, True, None, False)
                 rankings.append(ranking)
                 rand_amounts.append(rand_amount)
             print_validation_results(
@@ -161,6 +184,10 @@ def do_simulation(agents, agent_strings, num_epochs,
             if save_model:
                 for agent in agents:
                     agent.save_model()
+
+    # Save game records
+    if save_histories:
+        game_records.export_log_to_file()
 
     if save_model:
         # Save training stats

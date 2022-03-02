@@ -8,43 +8,46 @@ from egd.simulation import do_simulation
 from egd.parallel_simulation import do_par_simulation
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Parse args
     parser = argparse.ArgumentParser(
         description="Selection of Agents")
     parser.add_argument(
-        '--player0', default="Human", type=str, nargs="?",
-        metavar='Type of player 0.')
+        "--player0", default="Human", type=str, nargs="?",
+        metavar="Type of player 0.")
     parser.add_argument(
-        '--player1', default="QLearningAgent", type=str, nargs="?",
-        metavar='Type of player 1.')
+        "--player1", default="QLearningAgent", type=str, nargs="?",
+        metavar="Type of player 1.")
     parser.add_argument(
-        '--player2', default="QLearningAgent", type=str, nargs="?",
-        metavar='Type of player 2.')
+        "--player2", default="QLearningAgent", type=str, nargs="?",
+        metavar="Type of player 2.")
     parser.add_argument(
-        '--player3', default="QLearningAgent", type=str, nargs="?",
-        metavar='Type of player 3.')
+        "--player3", default="QLearningAgent", type=str, nargs="?",
+        metavar="Type of player 3.")
     parser.add_argument(
-        '--games', default="100", type=int, nargs="?",
-        metavar='Number of games.')
+        "--games", default="100", type=int, nargs="?",
+        metavar="Number of games.")
     parser.add_argument(
-        '--verbose', default=0, type=int, nargs="?",
-        metavar='Use verbose logging.')
+        "--verbose", default=0, type=int, nargs="?",
+        metavar="Use verbose logging.")
     parser.add_argument(
-        '--loadmodel', default=0, type=int, nargs="?",
-        metavar='Whether to load trained models.')
+        "--loadmodel", default=0, type=int, nargs="?",
+        metavar="Whether to load trained models.")
     parser.add_argument(
-        '--savemodel', default=0, type=int, nargs="?",
-        metavar='Whether to save models.')
+        "--savemodel", default=0, type=int, nargs="?",
+        metavar="Whether to save models.")
     parser.add_argument(
-        '--inference', default=0, type=int, nargs="?",
-        metavar='Whether to use the agents in inference mode.')
+        "--inference", default=0, type=int, nargs="?",
+        metavar="Whether to use the agents in inference mode.")
     parser.add_argument(
-        '--device', default="/device:CPU:0", type=str, nargs="?",
-        metavar='Which tensorflow device to use.')
+        "--device", default="/device:CPU:0", type=str, nargs="?",
+        metavar="Which tensorflow device to use.")
     parser.add_argument(
-        '--parallel', default=0, type=int, nargs="?",
-        metavar='Whether to use parallel processing.')
+        "--parallel", default=0, type=int, nargs="?",
+        metavar="Whether to use parallel processing.")
+    parser.add_argument(
+        "--savehistories", default=0, type=int, nargs="?",
+        metavar="Whether to save game histories.")
     args = parser.parse_args()
 
     # Parse agents
@@ -60,4 +63,4 @@ if __name__ == '__main__':
     with tf.device(args.device):
         sim_call = do_simulation if args.parallel == 0 else do_par_simulation
         sim_call(agents, agent_strings, args.games, (args.verbose == 1),
-                 (args.savemodel == 1), (args.inference == 1))
+                 (args.savemodel == 1), (args.inference == 1), (args.savehistories == 1))
