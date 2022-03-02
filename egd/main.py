@@ -1,5 +1,7 @@
 import argparse
 
+import tensorflow as tf
+
 from egd.io_util import get_agent
 from egd.game.state import NUM_PLAYERS
 from egd.simulation import do_simulation
@@ -38,6 +40,9 @@ if __name__ == '__main__':
         '--inference', default=0, type=int, nargs="?",
         metavar='Whether to use the agents in inference mode.')
     parser.add_argument(
+        '--device', default="/device:CPU:0", type=str, nargs="?",
+        metavar='Which tensorflow device to use.')
+    parser.add_argument(
         '--parallel', default=0, type=int, nargs="?",
         metavar='Whether to use parallel processing.')
     args = parser.parse_args()
@@ -52,6 +57,7 @@ if __name__ == '__main__':
             (args.loadmodel == 1)))
 
     # Start simulation
-    sim_call = do_simulation if args.parallel == 0 else do_par_simulation
-    sim_call(agents, agent_strings, args.games, (args.verbose == 1),
-             (args.savemodel == 1), (args.inference == 1))
+    with tf.device(args.device):
+        sim_call = do_simulation if args.parallel == 0 else do_par_simulation
+        sim_call(agents, agent_strings, args.games, (args.verbose == 1),
+                 (args.savemodel == 1), (args.inference == 1))
