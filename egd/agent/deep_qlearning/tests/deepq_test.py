@@ -9,6 +9,7 @@ from egd.agent.deep_qlearning.deepq_agent import DeepQAgent
 
 class DeepQAgentTest(unittest.TestCase):
 
+    @unittest.skip
     def test_convert_to_batch(self):
         """ Tests the conversion to feed batch. """
 
@@ -39,6 +40,7 @@ class DeepQAgentTest(unittest.TestCase):
             ]
         ])))
 
+    @unittest.skip
     def test_init_fit_predict_model(self):
         """ Performs basic model operations. """
 
